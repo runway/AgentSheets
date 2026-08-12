@@ -1,0 +1,7 @@
+dependencies:
+  tools:
+    - type: mcp
+      value: cfoai
+      description: Read and write cfo.ai models, pages, and charts.
+      transport: streamable_http
+      url: https://api.cfo.ai/mcp

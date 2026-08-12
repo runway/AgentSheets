@@ -1,0 +1,425 @@
+# Dimension mappings: reusable lookups from one dimension to another
+
+"Which Bucket does each GL account belong to?" The model's answer is a
+mapping: a lookup table owned by the target dimension. It is the product's
+VLOOKUP — defined once, then usable by every table, formula, and breakdown —
+except the model owns it, so every number that slices by Bucket stays
+consistent with it.
+
+The reason to reach for one is never the user's phrasing; it is where a piece
+of knowledge should live. A classification — which accounts are COGS, which
+customers are enterprise, which states are EMEA — is knowledge. As a mapping it
+is stated once and becomes structure the whole model can address. Stated
+anywhere else it is repetition: an item set pasted into three conditions, an
+IF chain inside a formula, a hand-grouped table — copies that drift apart the
+day one of them changes. **A judgment that would otherwise be stated twice, or
+outlive the answer it was made for, wants to be a mapping.**
+
+The move covers far more than bucketing, because anything of the shape "derive
+one axis from another" is this: canonicalizing messy source items (three
+spellings of one vendor becoming one clean item), consolidating one concept
+scattered across imports (three sources' event columns all landing in one Event
+dimension — §14.10), tiering (customers into Enterprise, Mid, SMB), rollups
+(state to region to theater), hierarchies by chaining one mapping through
+another (Account to Bucket to statement line).
+None of those requests will say "mapping"; the shape is the tell, so reason
+from the shape.
+
+One neighbor is not a mapping: renaming. When an item's own
+label is wrong — not that items need grouping — `edit_dimensions`
+`change.rename_item` renames one user-created item everywhere, rewriting the
+places that reference it. It takes user-created items only; an imported label
+is the source's to change, and canonicalizing imported labels is exactly the
+mapping above.
+
+The law has an inverse that keeps it honest: knowledge that is not stable
+earns no structure. An exploratory cut, a grouping invented for today's
+question — answer those with a view or a ranked read, and build the mapping
+the second time the same judgment comes up. Structure is for facts the model
+will keep.
+
+Load this file when a request groups one dimension's items under another, when
+any of the shapes above fits the task, when a user wants to see or hand-edit
+such a grouping, or when an existing mapping needs different keys.
+
+## 14.1 The lookup, on paper
+
+A mapping from Account to Bucket is this table, and nothing more:
+
+| Account       | Bucket  |
+| ------------- | ------- |
+| 5001          | COGS    |
+| 5002          | COGS    |
+| 6001          | Payroll |
+| anything else | Other   |
+
+One mapping input has three parts:
+
+- **Keys** — the dimension(s) looked up by; here `[Account]`. The distinct
+  condition grains on the target dimension declare these inputs.
+- **Rules** — the rows: one key coordinate, one item of the target dimension.
+- **Catch-all** — the `anything else` row. Optional, but without it an
+  account no rule matches maps to _nothing_: no Bucket at all, not a blank
+  that still counts.
+
+Under the hood the engine stores one conditioned formula per row on Bucket,
+and the conditions themselves declare the mapping's keys.
+`change.mapping` writes those formulas for you. Think in the table.
+
+## 14.2 Two keys, and which rule wins
+
+Keys can be several dimensions. "The bucket depends on the account _and_ the
+region" is this table:
+
+| Account       | Region    | Bucket        |
+| ------------- | --------- | ------------- |
+| 7001          | US        | Domestic Opex |
+| 7001          | any other | Intl Opex     |
+| 5001          | any       | COGS          |
+| anything else |           | Other         |
+
+Rows of different precision coexisting is normal. Three laws make it
+well-defined:
+
+- **A rule pins some keys and leaves the rest open.** An open key means "every
+  item, present and future": the `5001 / any` row is one rule covering every
+  region. A key a rule does not name is open; naming it with `"*"` says the
+  same thing explicitly.
+- **The most specific rule wins where rules overlap.** `7001, US` beats
+  `7001, any` exactly at US; the open rule covers every other region; the
+  catch-all floors whatever no rule touched. This is the same contest ordinary
+  formulas run (axiom 5), because rules _are_ formulas.
+- **The lookup runs over key coordinates the data actually has.** If no source
+  row carries the pair `7001, APAC`, that pair does not exist to be mapped — no
+  rule is owed for it, and the mapping never manufactures the full
+  Account × Region grid.
+
+A dimension may have independent mapping inputs for genuinely different
+imported vocabularies. For example, Unified Department can have one mapping
+table keyed by Department 1 and another keyed by Department 2. An amount from
+each import is classified on its own relation before the mapped cells combine.
+Two mapping inputs that both apply to the same imported relation, with
+neither more specific than the other, have no defined winner: use one
+composite key or separate the relations rather than relying on order.
+
+## 14.3 Is the request a mapping at all?
+
+Three constructions answer "group these", and choosing is a question about the
+knowledge rather than the wording: how far does the judgment reach, and how
+long does it live?
+
+**A mapping**, when it reaches beyond one view and outlives one answer.
+"Bucket our GLs into COGS and Opex, then show payroll by bucket" — the second
+half is evidence of reach, but reach is often silent: a grouping that three
+formulas will each need has the same claim on structure whether or not anyone
+says "everywhere".
+
+**Row nesting**, when it is one view's arrangement. "Show accounts grouped
+under region" is `[Region, Account]` on that table's breakdown; it says
+nothing about the model.
+
+**A ranked read**, when it dies with the answer. "Which accounts are biggest"
+is `inspect_model_views` `ask.rank`; nothing persists.
+
+In an existing model, the signals that a mapping is already owed rather than
+newly requested: the same item set repeated across conditions
+(`Account in {"5001", "5002"}` in three formulas), an IF chain classifying a
+dimension's items, a grouping maintained by hand in a table. Extracting the
+mapping usually deletes more than it adds. When genuinely unsure, answer first
+and build the structure on the second occurrence — the inverse law above.
+
+## 14.4 Author it
+
+`edit_dimensions` `change.mapping` writes a whole lookup in one call. The
+single-key table from §14.1, verbatim:
+
+```json
+{
+  "change": {
+    "mapping": {
+      "target_dimension": "Bucket",
+      "source_dimensions": ["Account"],
+      "items": { "5001": "COGS", "5002": "COGS", "6001": "Payroll" },
+      "otherwise": "Other"
+    }
+  }
+}
+```
+
+`items` is the one-key shorthand: source item to target item. The two-key
+table from §14.2 needs `rules`, one entry per row:
+
+```json
+{
+  "change": {
+    "mapping": {
+      "target_dimension": "Bucket",
+      "source_dimensions": ["Account", "Region"],
+      "rules": [
+        {
+          "match": { "Account": "7001", "Region": "US" },
+          "item": "Domestic Opex"
+        },
+        { "match": { "Account": "7001" }, "item": "Intl Opex" },
+        { "match": { "Account": "5001" }, "item": "COGS" }
+      ],
+      "otherwise": "Other"
+    }
+  }
+}
+```
+
+A `match` pins keys by item name, no formula quoting, and a key it leaves out
+is open (§14.2). For a term richer than "equals this item" — a set, a range,
+a negation — a rule takes `condition` instead, in the same grammar as a
+formula condition, brackets and all:
+`{"condition": "$[Account in {\"8001\", \"8002\"}]", "item": "Misc"}`.
+The `$` form claims exactly the dimensions named; a bare `[…]` is a subset
+condition, which also matches after the mapping gains a source dimension —
+the conditioned analogue of an open `match` key. Either way a rule declares
+only the narrowest grain named by its predicates.
+
+What the write refuses, so refusals are predictable:
+
+- a rule naming a dimension outside `source_dimensions` — a row cannot
+  widen what the lookup is keyed by, whichever way the row is spelled;
+- the target as its own key;
+- a repeated key;
+- a variable as the target;
+- a mapped item that does not read as the target's data type — it would
+  become a null member;
+- a mapping given none of `items`, `rules`, or `otherwise`;
+- a target whose items already come from a set formula.
+
+The last refusal is a boundary between mechanisms: a direct set-member
+domain and condition-inferred mapping inputs are separate
+dimension-definition mechanisms. A plain source-backed dimension is fine;
+conditioned formulas may supplement or override its imported values.
+
+The echo restates the lookup as written:
+
+```json
+{
+  "success": true,
+  "target_dimension": "Bucket",
+  "source_dimensions": ["…account-id…", "…region-id…"],
+  "rules_written": 3,
+  "target_items": ["COGS", "Domestic Opex", "Intl Opex", "Other"],
+  "catch_all": "Other",
+  "tables": [{ "block_id": "…", "name": "Bucket mapping", "page_id": "…" }]
+}
+```
+
+Read it before moving on. `source_dimensions` echoed back means the keys took.
+`tables` is every block that shows this mapping — no need to go looking. An
+empty `tables` means nothing shows it yet, which is the cue for §14.5.
+
+## 14.5 The table users see
+
+A mapping is formulas, and nobody reads formulas. The table is how a user sees
+one — and it is a live view of the rules, not a copy, so it cannot drift and
+there is nothing to keep in sync.
+
+```json
+{
+  "view": { "variables": [{ "dimension": "Bucket" }], "breakdown": "[Account]" }
+}
+```
+
+That renders §14.1's table live: accounts down the rows, each one's Bucket
+beside it. The dimension sits on the value axis (the position a variable
+normally occupies), the keys on the breakdown. A mapping-only view lays itself
+out this way — transposed — without being asked; `transpose: false` overrules
+it, and `change.transpose` on `edit_table_blocks` flips a block that already
+exists.
+
+The timeless, transposed shape is the mapping table's own, and it stops
+there. A table that _uses_ the mapping — spend by bucket, ARR by tier — is an
+ordinary report: the measured variable on the value axis, the mapped
+dimension nested under it as child rows, and time across the columns as the
+system Date with a real window (§14.10 step 4 states the same rule for
+consolidations). Never carry the mapping table's keys-on-the-shared-breakdown
+layout or its missing date axis onto a table of measured values — a mapping
+demo is one timeless lookup table beside timeseries usage tables, not a page
+of timeless tables.
+
+A demo's seeded values must land at the dated grain the usage table
+evaluates. Seed the measured variable per source item with `segments` plus
+`period`, one item per regime the window spans. A per-item write
+with no Date term (`$[Account = "5001"]`) stores at the dateless grain instead,
+and every dated cell floors to the regime fallback — source sums in actuals,
+zeros in forecast, no error anywhere (references/limitations.md §11).
+
+Use one table per mapping input. Unified Department keyed by Department 1 and
+Department 2 therefore has two tables, each showing the vocabulary it maps.
+The write's `tables` field says which blocks already place the mapped dimension
+on the value axis; reuse a block with the matching breakdown, and create the
+missing input-specific block only when needed.
+
+The table is also the verification. The echo reports what was _declared_; the
+table shows what _resolves_ against the coordinates the data actually has, and
+nothing knows those until the table calculates. A blank Bucket cell is an
+account nobody bucketed: surface those and offer `otherwise` or new rules
+rather than reporting the mapping done.
+
+To verify without creating a block, run the same `view` through
+`inspect_model_views` `ask.calculate`: it computes the same table headlessly
+and saves nothing.
+
+## 14.6 Changing the keys
+
+Widening one input from `[Account]` to `[Account, Region]` restates that input's
+conditions at the composite grain — the keys are the conditions (§14.1),
+and nothing else declares them.
+
+`change.mapping` merges by default: written rows land beside the target's
+existing rows, updating only a row at the same condition. A rekeying passes
+`replace: true`, which clears the rows the new mapping does not restate
+(items already registered stay). Forgetting it leaves the old single-key
+rules live, still winning the specificity contest wherever they pin more
+than the new rows.
+
+Carry the old rules forward as wildcard rules in the same call: restated under
+the new keys, `5001 → COGS` is `{"match": {"Account": "5001"}, "item": "COGS"}`,
+where the unnamed Region key is open — `"*"` opens the slot explicitly if you
+prefer to spell it. Then add the pairs that motivated the widening
+(`{"match": {"Account": "7001", "Region": "US"}, "item": "Domestic Opex"}`);
+they win over the open rules exactly where they pin more (§14.2).
+
+Update the same table's breakdown to `[Account, Region]`. Still one table.
+
+## 14.7 Reading one back
+
+`inspect_dimensions` `ask.mapping` returns the rules as
+`Bucket[Account = "5001"] = "COGS"` lines. An empty answer
+means the dimension has no mapping — its items come from its source or from
+added items instead. That emptiness is trustworthy: generated defaults are
+filtered out, so it is a real answer, not an artifact.
+
+## 14.8 What to watch for
+
+**Config-JSON writes promote bare dimension columns.** A hand-authored
+`table_config` gets `useAs: VARIABLE` written onto any top-level dimension
+column that has none, so a config can acquire a mapping marker nobody typed and
+then trip the rule that values live on one axis. The view path does not do
+this. Prefer a view.
+
+**Mapping cells compute but are not yet click-editable.** Users read the table;
+changes still go through `change.mapping`.
+
+**A lookup probe that returns the catch-all for every key is reporting where
+it asked, not what the mapping says.** Probe `Bucket[Account = "5001"]`
+through `try_formulas` and the answer is "Other" — for every account,
+including ones with rules. Neither the probe nor the mapping is broken. A
+bracket read runs at the address of the cell that contains it, `try_formulas`
+cells always carry a period, and the mapping's rules live at the bare key
+coordinate — an Account and nothing else — so a read that also carries a date
+matches none of them and falls through to the catch-all. That signature — the
+catch-all, or one identical item, at every key — means the question was asked
+somewhere the rules do not cover. It never means the rules are wrong: do not
+rewrite or delete rules because of it. Verify with §14.5's table, its
+headless read, or a hop probe (`this.Account.Bucket` with `by: ["Account"]`),
+which looks each account up at its own coordinate and returns the right item.
+
+**A variable whose values come from formulas, not imported rows, shows one
+account's value per bucket instead of a sum.** The mechanism and the fix —
+the reverse-lookup filter — are §14.9's.
+
+## 14.9 Using a mapping in formulas
+
+Once the mapping exists, formulas read it wherever they can look anything up.
+With §14.1's table in place:
+
+| You write                             | You get                                                                                             |
+| ------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| `this.Account.Bucket`                 | the cell's account looked up through the mapping — `COGS` at an account-5001 cell                   |
+| `this.Bucket`                         | the current segment's bucket, where the segment carries the keys                                    |
+| `sum(Amount[Bucket = "COGS"])`        | imported Amount summed over every account the mapping puts in COGS                                  |
+| `Units[Account.Bucket = this.Bucket]` | on Bucket rows: Units summed over each bucket's accounts — right even with no imported rows (§14.9) |
+| `if(this.Bucket = "COGS", Amount, 0)` | branch on the mapped item inside another formula                                                    |
+
+The hop resolves through the mapping at the key's own grain — the bare key
+coordinate, no date attached — so it is correct at any cell that carries the
+key, even when a date rides along. A bracket read of the dimension
+(`Bucket[Account = "5001"]`, `Bucket[Account = this.Account]`) is a different
+read: it dispatches the rules at the cell's full address — date included —
+where no rule matches, so it lands on the catch-all (§14.8). Spell lookups as
+hops.
+
+Each dot hop is a lookup keyed by the previous value, so hops keep going where
+mappings chain: with `Super Bucket` keyed by `Bucket`, one more `.` walks the
+second lookup. And a predicate on the mapped dimension runs the lookup in
+reverse — the engine gathers the source rows whose keys map into the named
+item, which is why `sum(Amount[Bucket = "COGS"])` needs no list of accounts.
+That reverse form works when the variable's values come from imported rows
+carrying the key. A variable whose values come only from formulas needs the
+explicit reverse-lookup filter spelling from the table above instead. Take
+two variables in §14.1's model. `Amount` is an imported ledger column: its
+values arrive as transaction rows, each tagged with an Account. Broken down
+by Bucket, the engine groups those rows by each account's bucket and adds
+them up — the COGS row is the total of every COGS-mapped account's rows.
+`Units` has no imported rows: its values are produced by formulas, say 80
+at account 5001 and 200 at account 5002, with both accounts mapped to
+COGS. With no rows to group, the engine fills the COGS cell from only one
+of the two accounts — it shows 80, not 280, and raises no error. For a
+variable like Units, write the rollup as the reverse-lookup filter
+(`Units[Account.Bucket = this.Bucket]`), which sums every account the
+mapping puts in the bucket.
+
+A mapping row always maps to a fixed item. The engine can also hold a
+computed form — a single expression at the key condition grain, deriving the
+item from the key's own value:
+
+```formula
+Bucket[Account in any] = if(this.Account = "5001", "COGS", if(this.Account = "6001", "Payroll", "Other"))
+```
+
+Computed forms are read-only: no write tool authors one — a
+`change.mapping` row maps to a fixed item, never an expression, and
+`change.set_values` writes variables only. Reads still echo one from
+models that carry it. An if-chain like this
+loses nothing to that limit — it is exactly two rows and an `otherwise`.
+
+The one computation rows cannot spell is the key's own label. The
+**same-name rule**
+
+```formula
+Event[Class in any] = this.Class
+```
+
+maps every label that already matches — present and future, with no items
+read — and explicit rows override it exactly where a label differs, by
+§14.2's specificity contest. Being an expression, it falls under the
+read-only limit above: a model that already carries one keeps its
+self-mapping behavior, and a consolidation (§14.10) authors the
+equivalent by enumerating the matching labels as rows.
+
+## 14.10 Consolidating several sources into one dimension
+
+Several imports often describe the same real-world concept under different
+vocabularies — an accounting system's classes, an HRIS's event names, a
+warehouse's event column, all naming the same events. This is §14.2's
+independent-inputs case, and its tell is the concept appearing once per
+source; no request will say "mapping".
+
+1. **Create the target dimension by hand.** Name it for the business concept
+   (`Event`), never after any one source — the source dimensions keep their
+   source-specific names — and never create a dimension under a name an
+   existing dimension already carries. The mapping write registers every item
+   its rules declare as a manual item in the same transaction, so pre-adding
+   items is only for canonical items no rule produces yet.
+2. **One mapping input per source.** Read the source's items and write one
+   `change.mapping` input per source: an `items` pair per already-matching
+   label (`"Renewal": "Renewal"`), explicit pairs where a label differs, and
+   `otherwise` only when a catch-all is truly meant — it would hide unmatched
+   keys. The same-name rule would cover matching labels unenumerated,
+   but it is read-only (§14.9), so a label the source adds later maps
+   nothing until the pairs are re-written; the mapping table's blank cells
+   reveal any key still unmatched (§14.5).
+3. **One table per input** (§14.5), so each vocabulary has its editable
+   surface.
+4. **Report by the target, on system time.** Break amounts down by the target
+   dimension, and put time on the columns as the system Date — never a
+   source's own date column.
+5. **Formulas per §14.9** — amounts with imported rows group directly; a line
+   computed by formulas takes the reverse-lookup filter.

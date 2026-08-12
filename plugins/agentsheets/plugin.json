@@ -1,0 +1,16 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "agentsheets",
+  "version": "0.1.0",
+  "description": "Model in cfo.ai from your agent: dimensional modeling, formulas, tables, and charts, backed by the cfo.ai MCP server.",
+  "author": "cfo.ai",
+  "homepage": "https://cfo.ai",
+  "repository": "https://github.com/runway/AgentSheets",
+  "keywords": [
+    "finance",
+    "modeling",
+    "forecasting",
+    "spreadsheet",
+    "cfo"
+  ]
+}

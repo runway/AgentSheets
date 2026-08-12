@@ -1,0 +1,15 @@
+{
+  "name": "agentsheets",
+  "version": "0.1.0",
+  "description": "Model in cfo.ai from your agent: dimensional modeling, formulas, tables, and charts, backed by the cfo.ai MCP server.",
+  "displayName": "AgentSheets",
+  "shortDescription": "Financial modeling in cfo.ai, driven by your agent.",
+  "category": "Productivity",
+  "skills": "./skills",
+  "mcpServers": "./mcp.json",
+  "author": "cfo.ai",
+  "homepage": "https://cfo.ai",
+  "repository": "https://github.com/runway/AgentSheets",
+  "websiteURL": "https://cfo.ai",
+  "defaultPrompt": "Build a headcount forecast in my cfo.ai workspace."
+}
