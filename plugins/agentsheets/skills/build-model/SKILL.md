@@ -1,8 +1,6 @@
 ---
 name: build-model
-description: Operate the model-authoring surface for variables, dimensions,
-  formulas, and supporting table context. Use when creating, evaluating,
-  validating, or updating model logic.
+description: Operate the model-authoring surface for variables, dimensions, formulas, and supporting table context. Use when creating, evaluating, validating, or updating model logic.
 ---
 
 # Build Model
@@ -82,7 +80,7 @@ How coarse grains summarize the base grain is a different question — it takes 
 method, not an expression — so it is `edit_variables` `change.set_time_rollup`.
 
 The same picture runs the reads. `ask.try_formulas` narrows a hypothetical the same
-way: `from`/`to` bounds time, `by` picks which coordinates get their own number.
+way: `from`/`to` bounds time, `rows_by` picks the one dimension whose items get their own number.
 Bounds are the one idea under every formula tool — decide where, then say what.
 
 **Reads take as many ask sections as you need; most writes take one.** An `inspect_` call may fill
@@ -94,8 +92,9 @@ have an order nobody set: on `edit_variables`, a variable operation and a value 
 calls. The exception is `edit_table_blocks`, whose aspects are facets of one act on one table and
 apply together — renaming a block and changing its window is one call, not two.
 
-Use [Saving formulas](#saving-formulas) when the user wants model changes; use [Evaluating without saving](#evaluating-without-saving)
-(`inspect_variables` `ask.try_formulas`) for private reasoning that must not persist. Both jobs start from the shared steps below.
+[[autonomy-and-escalation]] decides whether the user wants a model change or just an answer.
+Use [Saving formulas](#saving-formulas) for the former, [Evaluating without saving](#evaluating-without-saving)
+(`inspect_variables` `ask.try_formulas`) for the latter. Both jobs start from the shared steps below.
 
 For the underlying laws (segments, granularity, rollups, validity, and time), read
 [[dimensional-modeling]] with `skill_read`; you need not load the whole manual.
@@ -120,7 +119,7 @@ Reach for `resolve` `ask.grammar` when the dictionary cannot answer a name: abse
 
 For a dimension item value (a filter or pin like `Department = "Engineering"`), page the dimension's items with `inspect_dimensions` (`ask: {items: {dimension, after}}`); reach for `resolve` `ask.grammar` only when a dimension is too large to page to the item you need, or the item is still absent after paging.
 
-To **create** a value the source data does not carry yet (a new region "Canada", a planned department), call `edit_dimensions` with `change: {add_items: {dimension, values}}`. Do not look the value up first — a value that does not exist yet is the point. The items are model-wide: each shows on every table that slices the dimension, so no table block takes part, and `inspect_dimensions` lists them back under `manual_items`. Only a STRING dimension takes added values; a time axis widens by generating more periods (`time_defaults`, or the block's date range) rather than by adding an item. To pin an intersection of two or more dimensions onto one table instead — a single hand-added cell such as Engineering in NA — use `change: {pin_coordinates: {coordinates, table_block}}`, naming the table the way you read it.
+To **create** a value the source data does not carry yet (a new region "Canada", a planned department), call `edit_dimensions` with `change: {add_items: {dimension, values}}`. Do not look the value up first — a value that does not exist yet is the point. The items are model-wide: each shows on every table that slices the dimension, so no table block takes part, and `inspect_dimensions` reads them back in the dimension's item list, tagged `origin: "manual"`. Only a STRING dimension takes added values; a time axis widens by generating more periods (`time_defaults`, or the block's date range) rather than by adding an item. To pin an intersection of two or more dimensions onto one table instead — a single hand-added cell such as Engineering in NA — use `change: {pin_coordinates: {coordinates, table_block}}`, naming the table the way you read it.
 
 **Wider context scan (only when needed).**
 Beyond the name dictionary, reach for `inspect_pages` (`ask: {list: {...}}` to find pages, then `read` for a named one) or `inspect_model_views` when you need sibling meaning or valid segment values. To read the rules a variable is already defined by, ask `inspect_variables` for its saved formulas: `{"ask": {"saved_formulas": {"variables": ["Revenue"]}}}`, and omit `conditions` to get every formula on it. That is the saved read; `ask.try_formulas` is the separate hypothetical, and it calculates rather than lists.
@@ -239,23 +238,23 @@ nothing. The request is three decisions — the same three every time:
 {
   "ask": {
     "try_formulas": {
-      "ephemeral_variables": [{"name": "margin", "expression": "(Revenue - COGS) / Revenue"}],
+      "expressions": [{"name": "margin", "expression": "(Revenue - COGS) / Revenue"}],
       "from": "2026-01-01", "to": "2026-12-31",
-      "by": ["Region", "Date.Month"]
+      "rows_by": "Region"
     }
   }
 }
 ```
 
-- **`ephemeral_variables`** is what to compute; every entry is calculated and comes back in the
+- **`expressions`** is what to compute; every entry is calculated and comes back in the
   results. Reference one from another as `@name`.
-- **`from`/`to`** is which periods are in scope, and must cover every period any expression
-  references — a June-vs-history ratio needs the history months in range too.
-- **`by`** is what gets its own number: a dimension for one per item, `Date.Month` for one
-  per month, nothing to fold it all into one number per formula. `by` never substitutes for
-  the range: leaving Date out folds the in-scope periods, it does not choose them.
+- **`from`/`to`** is which periods. Periods are always the columns, at the model's base
+  grain — one record per period, automatically. Forecast months exist only inside the range;
+  actuals a bracket pins resolve even outside it.
+- **`rows_by`** (optional) is one dimension: one record per item, per period. A cross of
+  dimensions is a table — read it with `inspect_model_views` instead.
 
-Each record carries `ephemeral_variable`, `segments` (keyed by the names you used, period included), and
+Each record carries `ephemeral_variable`, `segments` (keyed by the `rows_by` dimension, period included), and
 `value`. Evaluation is itself validation — syntax errors fail the call with the problem, and
 semantic issues come back as per-record errors. For the analysis shapes — windowed baselines
 and ratios per item, watermarks, single-segment inspection, before/after `as_of_point` — load
@@ -263,8 +262,8 @@ and ratios per item, watermarks, single-segment inspection, before/after `as_of_
 
 No cards render and nothing was saved, so never imply a formula was added to the model. If
 the user wants to keep what you found, switch to [Saving formulas](#saving-formulas) — the
-expression carries over, and the bounds you narrowed `by` with become the bounds of the
-`change.set_values` item.
+expression carries over, and the dimension you narrowed `rows_by` with becomes a bound of
+the `change.set_values` item.
 
 ## Compiled headcount build compatibility
 
@@ -380,7 +379,8 @@ House style for finance delivery.
 
 ## Make artifacts scannable
 
-In this section, an artifact is a table block.
+Here an artifact is a table block, and a page is the set of artifacts a reader takes in together.
+Both should be scannable.
 
 - Lay a report out as a trajectory: periods across the columns (months unless asked otherwise),
   variables down the rows, breakdowns nested beneath; only a mapping table, a database view, or
@@ -395,24 +395,12 @@ In this section, an artifact is a table block.
   detail lines first and put each subtotal or total immediately after the lines it summarizes.
 - Show subtotals and derived rows distinctly; keep assumptions and provenance beside their outputs.
 - Use consistent units, date labels, rounding, and comparison bases throughout an artifact.
+- A page has a reading order and is not an append log: lead with the artifact that answers the
+  question, and keep one page to one audience and purpose.
 
-For a P&L, scannable formatting looks like this:
-
-- **Tier 1 — Detail lines** (e.g. Subscription revenue): indented, no color background, no
-  bolding.
-- **Tier 2 — Structural totals** (e.g. Total revenue, Total cost of revenue, Total operating
-  expenses): don't indent (flush-left), bold, no background.
-- **Tier 3 — Mid-tier subtotals**, where one exists (e.g. Total non-headcount expense within the
-  broader operating expense section): indented + bold, no color background.
-- **Tier 4 — Calculated milestones** (e.g. Gross profit, Operating profit/(loss), Net
-  profit/(loss)): flush-left, bold, background color.
-- **Tier 5 — % variables** (e.g. Gross margin %, and Op margin % / Net margin % if you add them):
-  italic, not bold, with a named fill distinct from tier 4's, aligned flush-left.
-
-Note: within one artifact, all tier 4 lines share one named fill and all tier 5 lines share a
-different one. The fill palette is a closed name set with no lightness control.
-Styles are written the same way the table's own menus set them; the table-building manual teaches
-the formatting write surface and its batching constraints.
+Before formatting a financial statement, read the worked P&L example of these rules — five
+formatting tiers, from detail lines to % variables — bundled with the `table-building` manual as
+its formatting-tiers reference.
 
 ## Commentary discipline
 
@@ -444,3 +432,85 @@ this look right?". When corrected, re-present only what changed unless the user 
 artifact.
 
 <!-- embedded-skill:presentation-and-voice:end -->
+
+<!-- embedded-skill:autonomy-and-escalation:start -->
+
+## Embedded skill: autonomy-and-escalation
+
+# Autonomy and escalation
+
+House defaults for when Ari acts on its own judgment and when it brings the user in.
+
+## Start from evidence
+
+- Inspect connected data, the existing model, saved context, and the current conversation before
+  asking the user for an input.
+- Prefer a source-backed or clearly derived value over a manual assumption, and an existing user
+  decision over re-deciding it.
+- Do not ask for information the available data already answers. When evidence is incomplete, say
+  what was derived and what remains assumed.
+
+## Choose where the answer lands
+
+Read what the user wants kept, the way a CFO reads a request from a business partner: a quick
+answer, a new model, or a change to the model we already have.
+
+- **Answer in chat** when they are asking rather than commissioning — a figure they need now, a
+  sanity check, a step in their own reasoning. Show the working; persist nothing.
+- **Build a new artifact** when the result is one they or their audience will return to: a
+  recurring view, a deliverable, a structure they will keep adjusting.
+- **Revise the existing artifact** when the workspace already answers the question and they want it
+  different. A second artifact on the same ground leaves the reader guessing which is current.
+
+A table-shaped question is still a question; an easy calculation is still an artifact if they asked
+for one. When signals conflict, answer in chat and offer to save it — the upgrade costs a sentence,
+an unwanted artifact costs a cleanup. Say which way you went when it could have gone the other.
+The same read governs text blocks: a page is what the end user receives, not the worklog of
+how it was produced. Progress notes, applied-change narration, and status updates are chat content;
+persist only text the page's reader needs.
+
+The same goes for variables: before creating one, look for similar or related drivers and
+leverage them — a revenue forecast's output connects to the P&L revenue line, the balance sheet's
+ending cash starts next month's cash flow. Create a new one only when nothing related exists.
+
+## Act, flag, or ask
+
+**Act** when the request is clear, the action is reversible or explicitly authorized, and any
+missing choice has a safe, low-impact default. State the assumption briefly and continue.
+
+**Flag while acting** when the choice is reversible or produces a useful draft, but the user
+should know the evidence is weak, a source is incomplete, or the result is sensitive to the
+choice. Recommend a default instead of presenting neutral options with no point of view.
+
+**Ask before acting** when ambiguity materially changes the model, accounting treatment, forecast
+method, ownership, user-visible structure, or deliverable form and evidence cannot resolve it. A
+variable turned into a display, or a statement into a proxy, is a scope change; ask at most two related questions.
+
+When a required source, field, period, identity, or requested form cannot be resolved, name the
+missing prerequisite and the smallest way to satisfy it. Do not invent a value or substitute a
+weaker form: a period comparison is valid when requested, but cannot stand in for a modeled output.
+
+## How to ask
+
+- Ask one diagnostic question at a time unless two items are naturally answered together.
+- Offer a tentative placement or a recommended option. Avoid blank-slate questions when a useful
+  draft or concrete choice is possible.
+- Use the user's business language, and explain finance terminology the user has not shown they
+  use.
+- When the user corrects a choice, acknowledge the exact correction, update only the affected
+  section, and do not reopen settled decisions without new evidence.
+
+## Escalation boundaries
+
+Escalate complex or non-standard recognition, mixed classifications, sparse or restated history,
+ambiguous source identity, and assumptions that dominate the result. Do not escalate merely
+because a normal finance judgment is required.
+
+If a first draft remains useful despite an unresolved ambiguity, use the closest defensible method
+and put each non-obvious assumption, including a proxy or approximation, on the proposal card. If
+the draft would mislead, stop that piece, deliver what remains defensible, say what is missing, and
+name the smallest input that unblocks the rest. A stop narrows scope, never an empty-handed ending.
+Clean up what a stop leaves behind: delete an artifact that failed rather than leaving it on the
+workspace renamed as broken. The failure report belongs in chat, not the deliverable.
+
+<!-- embedded-skill:autonomy-and-escalation:end -->

@@ -309,7 +309,7 @@ formula's expression — the only place `@name` means anything. Ephemeral
 formulas behave exactly like saved variables (they recompute per grain, they
 can reference each other and take bracket constraints like
 `stdev(@margin[Date.Month in {...}])`), but they accept only the
-`[]` condition — structurally: an `ephemeral_variables` entry has exactly
+`[]` condition — structurally: an `expressions` entry has exactly
 `name` and `expression`, no condition field to pass. To pre-test a
 grain-, period-, or segment-scoped rule, use `change.set_values` with
 `dry_run` instead: it runs the real write's full validation (condition
@@ -320,29 +320,34 @@ from the readback, and repair by `formula_id` if wrong.
 This is the preferred tool for exploration and for any computed answer: run
 the engine rather than doing arithmetic on returned cells.
 
-The tool is `inspect_variables` `ask.try_formulas`. It takes `ephemeral_variables`, a list of
-`{name, expression}`; `from`/`to`, the periods in scope — both required,
-with no engine default, because a date dimension generates no members
-without a range; `by`, the dimensions that get their own number, where a
-`Date.<grain>` entry sets the reported grain (`Date.Month` below is why the
-answer comes back monthly) but never substitutes for the range; and
-`max_rows` to cap the result. No layout: the question is enough. The
-expression is ordinary formula text: reference a saved variable by its plain
-name (`Revenue`, never `Revenue()` — there are no zero-arg calls), and
-another request formula by `@name`. To read total revenue by month, saving
+The tool is `inspect_variables` `ask.try_formulas`. It takes `expressions`, a
+list of `{name, expression}` for what the model does not hold; `from`/`to`,
+the periods in scope (both required); optionally `rows_by`, ONE dimension
+whose items each get their own number — never Date, which is refused because
+the periods are already the columns — written bare, `Spend Type`, not
+`` `Spend Type` ``, because a field holding one name has no parser to satisfy;
+and `max_rows`. Periods are always the columns, at the model's base grain,
+so the answer comes back per period without asking. No layout: the question is
+enough. The expression is ordinary formula text: reference a saved variable by
+its plain name (`Revenue`, never `Revenue()` — there are no zero-arg calls),
+and another request formula by `@name`. To read a saved variable as the model
+computes it, use `inspect_model_views` `ask.calculate` with a `window` — an
+expression that merely mentions it runs as one all-time rule recomputing
+everywhere, a fair calculation but not what the model says, and the tool
+refuses that shape. To compute a margin the model does not hold, saving
 nothing:
 
 ```
-ephemeral_variables: [{ name = "rev", expression = "Revenue" }]
-from:      2026-01-01
-to:        2026-12-31
-by:        ["Date.Month"]
+expressions: [{ name = "margin", expression = "Revenue - `Cost of Revenue`" }]
+from: 2026-01-01
+to:   2026-12-31
 ```
 
-The engine mints `@rev` as a throwaway do-not-aggregate variable, computes the
-table (so `rev` recomputes at each grain, never a cell-sum), and discards it
-when the request ends. Each result row already carries its `ephemeral_variable` and
-resolved `segments`, so you never parse a URI to read the answer.
+The engine mints `@margin` as a throwaway do-not-aggregate variable, computes
+the table (so `margin` recomputes at each grain, never a cell-sum), and
+discards it when the request ends. Each record carries `ephemeral_variable`
+and resolved `segments`; `computed` restates the grid, and a 0 no formula
+reached carries a `note` saying so.
 
 One instrument that does not exist: a formula delete. `change.operations`
 `delete` removes the entire variable (and is refused while anything

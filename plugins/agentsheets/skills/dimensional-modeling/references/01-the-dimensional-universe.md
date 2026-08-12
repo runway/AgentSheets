@@ -74,11 +74,12 @@ workspace:
    else becomes dimensions. The kind is immutable after sync (no re-kind
    operation exists), so a numeric code column that should group — an
    account number, a zip code — has exactly one lever: alias it in the
-   ingestion query's SQL so the name says what it is, then re-sync. Query
-   edits live on the ingestion agent, reached with `delegate_agent`
-   `change.ingestion`. These entries carry provenance (which query,
-   which integration). Identity is (name, source query), so re-syncs are
-   idempotent.
+   ingestion query's SQL so the name says what it is, then re-sync. Ari
+   cannot edit saved-query SQL, so name the exact alias change and hand it
+   to the user to apply to the query; once they have, reach the re-sync
+   through `delegate_agent` `change.ingestion`. These entries carry
+   provenance (which query, which integration). Identity is (name, source
+   query), so re-syncs are idempotent.
 3. **System bootstrap.** Every workspace gets the system **Date**
    dimension, the **Last close** date ref, and the **Actuals**/**Forecast**
    formula ranges. System entries are universally readable, unrenamable,
@@ -97,10 +98,11 @@ source data (the MATCH behavior). Three ways items exist beyond the data:
 - **Hand-added items**: values added by hand so a table or formula can address
   what has no data yet (a planned department, a future product). A value added
   to one dimension (`add_items`) is model-wide — it exists on every table that
-  slices that dimension — and is listed back under `manual_items`. Pinning an
-  intersection of several dimensions (`pin_coordinates`) is scoped to the one
-  table block that shows it, and is not an item of any single dimension, so it
-  is not listed among them.
+  slices that dimension — and reads back in the item list beside the source
+  spellings, tagged `origin: "manual"` (or `"source+manual"` once the source
+  starts carrying it too). Pinning an intersection of several dimensions
+  (`pin_coordinates`) is scoped to the one table block that shows it, and is
+  not an item of any single dimension, so it is not listed among them.
 - **Generated items** (the GENERATE behavior): an axis can be told to
   generate items over a configured range even where no data exists. Date
   axes do this implicitly across the table's date range. That is why

@@ -87,6 +87,24 @@ for a large batch — valid items land and you resubmit only the rejects — and
 the items must apply together or not at all. When rival rules already sit at one address,
 `formula_id` on an item updates the one you name.
 
+Both settings are call-scoped: they go at the top level of the call, beside `scenario` and
+`change`, never inside the block. `change` carries exactly one concern, so there is no finer
+scope for them to sit in — and putting them inside a block is refused rather than ignored.
+
+```json
+{"scenario": "Base", "mode": "atomic", "change": {"set_values": {"items": [ ... ]}}}
+```
+
+`edit_variables` `change.operations` honors `mode` — atomic runs the whole batch as one change,
+committing only if every operation succeeded, so a rejected one takes the earlier ones back out
+with it and the whole batch undoes by the single id it reports. Reach for it when the operations only make sense together, such as the
+variables a formula you are about to write depends on. It has no `dry_run`: nothing checks an
+operation without running it, and asking is refused rather than quietly ignored. Atomic is the
+closer substitute — it applies everything or nothing, so a bad operation costs you no cleanup.
+
+`edit_model_views` takes `dry_run` and has no `mode` — its table entries always apply
+independently. `edit_dimensions` takes neither, and its operations always apply independently.
+
 ## Step 3: Read the response, not just the status
 
 `applied: true` only says the write landed somewhere. Where it landed is the part worth checking,

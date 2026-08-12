@@ -1,17 +1,17 @@
 ---
 name: visualization-building
-description: Operate pages, charts, and code visualizations for saved reports.
-  Use when creating, validating, inspecting, or updating a chart or custom
-  visualization.
+description: Operate pages, charts, and code visualizations for saved reports. Use when the user wants a visual saved on a page — creating, validating, inspecting, or updating one — not merely to explain what the data shows in chat.
 ---
 
 # Visualization Building
 
 <!-- standards:start -->
 
-Apply [[presentation-and-voice]]. Choose the smallest visual that makes the relationship easier to
-understand and use the product's branded rendering path. Before proposing a visual, confirm that
-its required variables exist. If they do not, name the missing data instead of promising the visual.
+Apply [[presentation-and-voice]]. [[autonomy-and-escalation]] decides whether this work is a chat
+answer, a new artifact, or a revision; act on that before writing. Choose the smallest visual that
+makes the relationship easier to understand and use the product's branded rendering path. Before
+proposing a visual, confirm that its required variables exist. If they do not, name the missing
+data instead of promising the visual.
 
 <!-- standards:end -->
 
@@ -23,11 +23,13 @@ calling `edit_pages` with a `change.add_code_block` block. A markdown
 description is not a saved block.
 
 The current `pageId` and `layerId` are supplied automatically — do not ask for
-them. `page` (a page id or name) targets a different page, and `after_block`
-places the visualization directly below a block instead of at the end of the
-page. Both sit inside the `change.add_code_block` block alongside `source`, not
-beside `change`. To move one that already exists, reorder it — see
-"Arranging a page" in [[table-building]] — never delete and recreate it.
+them. `page` (a page id or name) targets a different page, and sits beside
+`change`, the way `scenario` does: it names the page the whole call acts on.
+`after_block` places the visualization directly below a block instead of at the
+end of the page, and sits inside the `change.add_code_block` block alongside
+`source`, because it names a position within that one change. To move a block
+that already exists, reorder it — see "Arranging a page" in [[table-building]] —
+never delete and recreate it.
 
 ## What to build here (read this first)
 
@@ -69,9 +71,15 @@ Choose the smallest chart that fits the relationship, then read its product-cont
 
 ## Existing chart-block compatibility
 
-Existing models may still contain legacy chart blocks. Use `get_chart_block_data` only when the
-user asks to inspect the data behind one. New or updated visualizations use code blocks; do not
-recreate a legacy chart block or imply that its removed authoring operations are still available.
+Existing models may still contain legacy chart blocks. Nothing reads the numbers behind one: the
+tool that did is gone along with the authoring operations. `resolve` still describes them —
+`ask.candidates` with `kind: "chart_block"` names them, and `ask.entities` reports the variables one
+refers to — so you can say what a legacy chart is about without being able to calculate it.
+
+To answer a question about the data behind one, read those variables with `inspect_model_views`,
+against the same split the chart shows, rather than reading the block. If the user wants the visual
+itself back, rebuild it as a code block; do not recreate a legacy chart block or imply that its
+removed operations are still available.
 
 ## Workflow
 
@@ -97,14 +105,14 @@ common shapes).
 4. Call `edit_pages` with a `change.add_code_block` block carrying `source` AND
    `datasets`, then say what you built.
 
-Example call (one variable by month). Everything the block needs sits inside
-`change.add_code_block`, not beside `change`:
+Example call (one variable by month). The page the call acts on is named beside
+`change`; everything the change itself needs sits inside `change.add_code_block`:
 
 ```json
 {
+  "page": "Revenue",
   "change": {
     "add_code_block": {
-      "page": "Revenue",
       "source": "function Block({ data }) { /* see The contract */ }",
       "datasets": [
         {
@@ -150,10 +158,6 @@ Two things follow from declaring datasets this way, and both save you calls:
   variable and the call is rejected with the name that failed; no block is
   created. The alternative — a block that saves cleanly and then renders an
   error where the chart should be — cannot happen.
-- **Never mint ids for a dataset.** A view names variables, not nodes, and the
-  server assigns node ids when it compiles — as it does for the `table_config`
-  fallback below, whose ids you may leave out entirely. `generate_uuids` has no
-  part in building a visual.
 
 ### Check the readback before you report the visual
 
@@ -177,21 +181,30 @@ grid; the block still exists. Say what you saw when you describe the visual,
 and if a dataset came back empty, say that rather than reporting the chart as
 finished.
 
-For a query a view cannot express, a dataset may instead carry a raw
-`table_config` — the same shape a table block stores, with your variables in
-`rows` and a `COLUMN_PROPERTY` axis in `columns`. Pass exactly one of `view`
-or `table_config` per dataset. Neither form may ask for a scenario comparison:
+A dataset carries a `view`. It may not ask for a scenario comparison:
 a code block always resolves its data at the page's current scenario.
 
 ## Editing an existing block
 
 To change a code block you already created — a render bug, a layout tweak, a new
 variable, or a reworded label — call **`edit_pages` with a `change.update_code_block`
-block**, not delete-and-recreate. That block carries a `blocks` array, one entry
-per block being rewritten, each with the `block_id` (from the add_code_block
-result) and the full new `source`. Like `page`, they sit inside
-`change.update_code_block`, not beside `change`. `source` is a whole-source
-replace, so send the complete `Block` component, not a fragment.
+block**, not delete-and-recreate. It takes the same fields as `add_code_block`,
+plus the `block_id` the create returned:
+
+```json
+{
+  "change": {
+    "update_code_block": {
+      "block_id": "<block_id>",
+      "source": "function Block({ data }) { /* the whole component */ }"
+    }
+  }
+}
+```
+
+`source` is a whole-source replace, so send the complete `Block` component, not
+a fragment. To rewrite several blocks in one call, pass a `blocks` array instead,
+one entry per block carrying those same fields.
 
 `datasets` and `title` are preserved when you omit them: only pass `datasets`
 when the block's live data actually changes (re-declare the full set), and only
@@ -299,7 +312,7 @@ highlight) so the SAME code serves every scenario with different settings.
 ### Injected scope (globals available in your code — no import needed)
 
 - `React` — for hooks if you need them.
-- `Chart` — the preferred chart component. Pass normal AG Charts `options` (`data`, `series`, `axes`, `listeners`). It automatically applies CFO.ai's branded AG Charts theme, transparent background, default chart-block palette, tooltip styling, and enterprise chart modules (including ChartBlock types like Nightingale and Waterfall). You usually do **not** need `options.theme`.
+- `Chart` — the preferred chart component. Pass normal AG Charts `options` (`data`, `series`, `axes`, `listeners`). It automatically applies CFO.ai's branded AG Charts theme, transparent background, default chart-block palette, tooltip styling, and enterprise chart modules (including ChartBlock types like Nightingale and Waterfall). You usually do **not** need `options.theme`. To size a chart, pass a `height` prop in pixels (`<Chart height={350} options={...} />`); it defaults to the theme's `charts.defaultHeight` (240). `options.height` works the same way; the `height` prop wins when both are given. One resolved height drives both the chart's layout box and its canvas, so a taller chart pushes content below it down instead of painting over it.
 - `AgCharts` — compatibility alias for older saved blocks only. Do not use it
   in new or updated CodeBlock source; use `Chart` so chart colors, background,
   axes, tooltip chrome, and dark-mode updates stay connected to CFO.ai tokens.
@@ -414,7 +427,8 @@ House style for finance delivery.
 
 ## Make artifacts scannable
 
-In this section, an artifact is a table block.
+Here an artifact is a table block, and a page is the set of artifacts a reader takes in together.
+Both should be scannable.
 
 - Lay a report out as a trajectory: periods across the columns (months unless asked otherwise),
   variables down the rows, breakdowns nested beneath; only a mapping table, a database view, or
@@ -429,24 +443,12 @@ In this section, an artifact is a table block.
   detail lines first and put each subtotal or total immediately after the lines it summarizes.
 - Show subtotals and derived rows distinctly; keep assumptions and provenance beside their outputs.
 - Use consistent units, date labels, rounding, and comparison bases throughout an artifact.
+- A page has a reading order and is not an append log: lead with the artifact that answers the
+  question, and keep one page to one audience and purpose.
 
-For a P&L, scannable formatting looks like this:
-
-- **Tier 1 — Detail lines** (e.g. Subscription revenue): indented, no color background, no
-  bolding.
-- **Tier 2 — Structural totals** (e.g. Total revenue, Total cost of revenue, Total operating
-  expenses): don't indent (flush-left), bold, no background.
-- **Tier 3 — Mid-tier subtotals**, where one exists (e.g. Total non-headcount expense within the
-  broader operating expense section): indented + bold, no color background.
-- **Tier 4 — Calculated milestones** (e.g. Gross profit, Operating profit/(loss), Net
-  profit/(loss)): flush-left, bold, background color.
-- **Tier 5 — % variables** (e.g. Gross margin %, and Op margin % / Net margin % if you add them):
-  italic, not bold, with a named fill distinct from tier 4's, aligned flush-left.
-
-Note: within one artifact, all tier 4 lines share one named fill and all tier 5 lines share a
-different one. The fill palette is a closed name set with no lightness control.
-Styles are written the same way the table's own menus set them; the table-building manual teaches
-the formatting write surface and its batching constraints.
+Before formatting a financial statement, read the worked P&L example of these rules — five
+formatting tiers, from detail lines to % variables — bundled with the `table-building` manual as
+its formatting-tiers reference.
 
 ## Commentary discipline
 
@@ -478,3 +480,85 @@ this look right?". When corrected, re-present only what changed unless the user 
 artifact.
 
 <!-- embedded-skill:presentation-and-voice:end -->
+
+<!-- embedded-skill:autonomy-and-escalation:start -->
+
+## Embedded skill: autonomy-and-escalation
+
+# Autonomy and escalation
+
+House defaults for when Ari acts on its own judgment and when it brings the user in.
+
+## Start from evidence
+
+- Inspect connected data, the existing model, saved context, and the current conversation before
+  asking the user for an input.
+- Prefer a source-backed or clearly derived value over a manual assumption, and an existing user
+  decision over re-deciding it.
+- Do not ask for information the available data already answers. When evidence is incomplete, say
+  what was derived and what remains assumed.
+
+## Choose where the answer lands
+
+Read what the user wants kept, the way a CFO reads a request from a business partner: a quick
+answer, a new model, or a change to the model we already have.
+
+- **Answer in chat** when they are asking rather than commissioning — a figure they need now, a
+  sanity check, a step in their own reasoning. Show the working; persist nothing.
+- **Build a new artifact** when the result is one they or their audience will return to: a
+  recurring view, a deliverable, a structure they will keep adjusting.
+- **Revise the existing artifact** when the workspace already answers the question and they want it
+  different. A second artifact on the same ground leaves the reader guessing which is current.
+
+A table-shaped question is still a question; an easy calculation is still an artifact if they asked
+for one. When signals conflict, answer in chat and offer to save it — the upgrade costs a sentence,
+an unwanted artifact costs a cleanup. Say which way you went when it could have gone the other.
+The same read governs text blocks: a page is what the end user receives, not the worklog of
+how it was produced. Progress notes, applied-change narration, and status updates are chat content;
+persist only text the page's reader needs.
+
+The same goes for variables: before creating one, look for similar or related drivers and
+leverage them — a revenue forecast's output connects to the P&L revenue line, the balance sheet's
+ending cash starts next month's cash flow. Create a new one only when nothing related exists.
+
+## Act, flag, or ask
+
+**Act** when the request is clear, the action is reversible or explicitly authorized, and any
+missing choice has a safe, low-impact default. State the assumption briefly and continue.
+
+**Flag while acting** when the choice is reversible or produces a useful draft, but the user
+should know the evidence is weak, a source is incomplete, or the result is sensitive to the
+choice. Recommend a default instead of presenting neutral options with no point of view.
+
+**Ask before acting** when ambiguity materially changes the model, accounting treatment, forecast
+method, ownership, user-visible structure, or deliverable form and evidence cannot resolve it. A
+variable turned into a display, or a statement into a proxy, is a scope change; ask at most two related questions.
+
+When a required source, field, period, identity, or requested form cannot be resolved, name the
+missing prerequisite and the smallest way to satisfy it. Do not invent a value or substitute a
+weaker form: a period comparison is valid when requested, but cannot stand in for a modeled output.
+
+## How to ask
+
+- Ask one diagnostic question at a time unless two items are naturally answered together.
+- Offer a tentative placement or a recommended option. Avoid blank-slate questions when a useful
+  draft or concrete choice is possible.
+- Use the user's business language, and explain finance terminology the user has not shown they
+  use.
+- When the user corrects a choice, acknowledge the exact correction, update only the affected
+  section, and do not reopen settled decisions without new evidence.
+
+## Escalation boundaries
+
+Escalate complex or non-standard recognition, mixed classifications, sparse or restated history,
+ambiguous source identity, and assumptions that dominate the result. Do not escalate merely
+because a normal finance judgment is required.
+
+If a first draft remains useful despite an unresolved ambiguity, use the closest defensible method
+and put each non-obvious assumption, including a proxy or approximation, on the proposal card. If
+the draft would mislead, stop that piece, deliver what remains defensible, say what is missing, and
+name the smallest input that unblocks the rest. A stop narrows scope, never an empty-handed ending.
+Clean up what a stop leaves behind: delete an artifact that failed rather than leaving it on the
+workspace renamed as broken. The failure report belongs in chat, not the deliverable.
+
+<!-- embedded-skill:autonomy-and-escalation:end -->

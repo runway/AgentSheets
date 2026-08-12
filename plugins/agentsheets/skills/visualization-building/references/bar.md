@@ -31,10 +31,9 @@ series: ds.series.map((s) => ({
 })),
 ```
 
-Pick the comparison buckets with the dataset's
-`table_config.settings.dateGranularity` (e.g. QUARTER for "by quarter"); for a
-single-point categorical comparison use a narrow
-`table_config.settings.dateRange` instead of fine granularity.
+Pick the comparison buckets with the dataset's `window` granularity (e.g.
+QUARTER for "by quarter"); for a single-point categorical comparison use a
+narrow `window` instead of fine granularity.
 
 ## Contract notes
 
