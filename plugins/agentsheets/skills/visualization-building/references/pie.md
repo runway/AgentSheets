@@ -3,7 +3,7 @@
 ## Chart options shape
 
 A pie shows one point in time. Prefer a dataset that resolves to a single row
-(narrow dateRange in `table_config.settings`); if the dataset still carries
+(a narrow `window`); if the dataset still carries
 multiple periods, take the LATEST row — silently charting the first row shows
 stale composition:
 

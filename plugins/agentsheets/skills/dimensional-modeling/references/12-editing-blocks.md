@@ -41,10 +41,9 @@ non-mapping block back (references/11-block-grammar.md §11.3); restate
 `transpose: true` on such a block's updates. Anything
 the reconcile had to drop comes back as a warning. A view that fails
 validation returns its problems and persists nothing: the writes validate
-themselves, so call directly; reach for `dry_run` when a whole-config
-replace is risky (SKILL.md axiom 17) — and when the config checks matter:
-a view write never surfaces config-check warnings (the missing time
-column and its kin), so a dry run is the only way to see them.
+themselves, so call directly; reach for `dry_run` when an update is risky
+enough to check first (SKILL.md axiom 17). A create reports the config
+checks itself, as advisory warnings on the applied item.
 
 The method is always the same three moves:
 
@@ -180,12 +179,9 @@ A `signature_status` of `partial (…)` names structure only the config
 rendering can touch — generated axes, role overrides, per-item
 overrides, multi-entry axes, drill-in paths beyond a branch condition,
 the formula lane (references/03-table-blocks.md §3.9). A view update
-against those rejects with guidance rather than silently dropping user
-work. Take the hint and edit through `table_config` (the
-whole-config replace with caller-threaded node ids). Read that config
-with `inspect_table_blocks` `ask.config`, which returns the block's own ids
-rather than fresh ones, and — since this is exactly the risky
-whole-config replace — check the edit with `dry_run`.
+against those rejects with guidance rather than silently dropping user work.
+There is no raw-config path to fall back to: say what the view cannot express
+and stop, rather than rebuilding the block by hand.
 
 ## 12.7 Formatting: the same styles users set by hand
 

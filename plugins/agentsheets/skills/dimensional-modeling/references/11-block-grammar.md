@@ -62,12 +62,10 @@ and `presentation` beside them for how it shows. Its `window`, `comparison`
 and `sort` are the words `edit_table_blocks` takes, so they edit straight
 back; `transposed` states orientation instead, because `change.transpose`
 flips rather than sets (§11.3). Every other read describes a table the same
-way, page reads included. `ask.config` is the one read that hands back a
-stored `table_config`, for the whole-config replace that needs the block's own
-node ids (§11.5).
+way, page reads included.
 
 Writes go through `edit_model_views` `change.configure_table`: each `tables[]`
-entry carries EXACTLY ONE of `view` or `table_config`, and entries apply
+entry carries a `view`, and entries apply
 independently. A call also performs one operation — it creates, or updates,
 or carries one copy — and mixing operations (or batching copies) is
 rejected whole.
@@ -80,11 +78,11 @@ surviving drill-ins, the source's window (the copy path refuses a
 and the whole settings bag (column widths included); §11.4 carries the
 node-id law a copy runs under. Checking
 runs in two layers: view-grammar and model errors reject before anything
-persists on every write, but the config checks (the missing-time-column
-warning and its kin) run on the write only for a config-JSON create —
-`dry_run` (inside `change.configure_table`) is the only way to see them on a
-view create or any update. Only structure a view
-cannot describe uses `table_config` (11.5).
+persists on every write, and the config checks (the missing-time-column
+warning and its kin) ride a create's own result as advisory warnings. On an
+update, `dry_run` (at the top level of the call, beside `change`) is how you
+see them first — it runs the same checks without persisting
+(references/06-validity.md §6.1). Structure a view cannot describe is not agent-writable at all (§11.5).
 
 The pivot law carries over verbatim: two blocks with the same view up to
 row/column placement hold the same numbers. The default placement bands the
@@ -130,9 +128,7 @@ does not carry — node ids, aggregation
 functions, sort, the formula lane, surviving segment drill-ins,
 presentation state — is reconciled from the block itself: structurally
 matched rows and columns keep their axis ids (drill-in anchors and
-overrides stay valid) and everything that rides with them. Because a view
-carries no ids, building or reshaping a table never calls `generate_uuids`;
-the write mints and reconciles every one. A match is
+overrides stay valid) and everything that rides with them. A match is
 exact on three things: the side (row vs column), the chain of properties
 from the root down to the node, and the node's own drill-in coordinates
 — reordering siblings is safe (order never enters the key), but changing
@@ -143,10 +139,9 @@ silent loss. `copy_from` runs the same reconciliation against its source,
 then mints every node id fresh — a copy never shares axis identity with
 its source.
 
-To edit a block, hand a view to `change.configure_table` naming the table. Read
-its config with `inspect_table_blocks` `ask.config` when you need ids, but
-never rebuild a `table_config` from a view and hand that back: a compiled
-config carries fresh ids and none of the carried-over state.
+To edit a block, hand a view to `change.configure_table` naming the table.
+The write reconciles against the block's current config, keeping everything
+the view does not describe.
 
 Author time yourself: a table of native variables carries a Date breakdown
 (`"breakdown": "[Date.Month]"`) that you write in, with a real window on
@@ -167,7 +162,7 @@ table, a database view, or an assumptions list the user asked for as such
 
 ## 11.5 The boundary
 
-Structure a view cannot describe stays on `table_config`, and a read
+Structure a view cannot describe is not agent-writable; a read
 names it in the signature's `# kind` lines: generated axes (`generate`),
 role overrides other than §11.1's mapping form, multi-property
 (flattened) axes, freeform axes, per-item overrides, drill-in paths

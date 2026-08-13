@@ -2,8 +2,8 @@
 
 ## Chart options shape
 
-Declare one dataset per chart (dateGranularity/dateRange live in the dataset's
-`table_config.settings`; `MONTH` is the most common granularity). The dataset
+Declare one dataset per chart (granularity and range live in the dataset's
+`window`; `MONTH` is the most common granularity). The dataset
 key below (`revenue`) is the `name` you declared in `datasets` — substitute yours:
 
 ```jsx
@@ -42,5 +42,5 @@ series: ds.series.map((s) => ({
 
 ## Common mistakes
 
-- Forgetting `dateGranularity` in the dataset's `table_config.settings` (no proper time axis)
+- Forgetting the granularity in the dataset's `window` (no proper time axis)
 - Hardcoding variable-name yKeys (`yKey: "revenue"`) — read keys from `ds.series`

@@ -19,11 +19,11 @@ already has.
 ## Skills
 
 | Skill | When it applies |
-| --- | --- |
+| ----- | --------------- |
 | `build-model` | Operate the model-authoring surface for variables, dimensions, formulas, and supporting table context. Use when creating, evaluating, validating, or updating model logic. |
 | `dimensional-modeling` | The core reference for how modeling works — segments and grains, formula dispatch and recompute-vs-rollup laws, table-block axes and pivoting, validity rules, time and granularity, scenarios and comparisons, and the modeling workflow. Use when designing, restructuring, debugging, or explaining tables, formulas, or pivots; when numbers look wrong or cells are unexpectedly blank; or before any multi-step modeling build. |
-| `table-building` | Operate pages and saved table blocks for financial reports. Use when creating, validating, inspecting, or updating a report table. |
-| `visualization-building` | Operate pages, charts, and code visualizations for saved reports. Use when creating, validating, inspecting, or updating a chart or custom visualization. |
+| `table-building` | Operate pages and saved table blocks for financial reports. Use when the user wants a table saved as an artifact — creating, validating, inspecting, or updating one — not merely to answer a table-shaped question in chat. |
+| `visualization-building` | Operate pages, charts, and code visualizations for saved reports. Use when the user wants a visual saved on a page — creating, validating, inspecting, or updating one — not merely to explain what the data shows in chat. |
 
 ## About this repository
 

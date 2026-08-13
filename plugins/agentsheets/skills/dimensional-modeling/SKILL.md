@@ -1,11 +1,6 @@
 ---
 name: dimensional-modeling
-description: The core reference for how modeling works — segments and grains,
-  formula dispatch and recompute-vs-rollup laws, table-block axes and pivoting,
-  validity rules, time and granularity, scenarios and comparisons, and the
-  modeling workflow. Use when designing, restructuring, debugging, or explaining
-  tables, formulas, or pivots; when numbers look wrong or cells are unexpectedly
-  blank; or before any multi-step modeling build.
+description: The core reference for how modeling works — segments and grains, formula dispatch and recompute-vs-rollup laws, table-block axes and pivoting, validity rules, time and granularity, scenarios and comparisons, and the modeling workflow. Use when designing, restructuring, debugging, or explaining tables, formulas, or pivots; when numbers look wrong or cells are unexpectedly blank; or before any multi-step modeling build.
 ---
 
 # Dimensional modeling
@@ -59,9 +54,14 @@ Treat the engine laws as facts and the method, workflow, and recipes as guidance
    adding mapping inputs. Several imports spelling one business concept still
    get one dimension — each source's column mapped into it, the way every
    source's dates fold into the system Date. Author a dimension mapping with
-   `edit_dimensions` `change.mapping` and read it back with
-   `inspect_dimensions` `ask.mapping`
-   (references/14-dimension-mappings.md).
+   `edit_dimension_mappings` and read it back, grouped by lookup, with
+   `inspect_dimension_mappings` (references/14-dimension-mappings.md). A
+   mapping is a judgment made on the user's behalf, so show what you matched
+   — the pairs themselves, in the reply or in something saved — rather than
+   only reporting that a mapping now exists; a classification they cannot
+   see is one they cannot correct. Showing the pairs in the reply is enough
+   when the mapping is the whole ask; build the block when the user wants
+   something modeled on top of it.
 
 ### The calculus
 
@@ -102,7 +102,9 @@ Treat the engine laws as facts and the method, workflow, and recipes as guidance
    or average, the only place average is reachable. Either way the rollup
    runs through a generated formula chosen by the function, still
    grain-bound; do-not-aggregate variables skip this entirely
-   (references/04-time.md).
+   (references/04-time.md). When a block answers about particular members,
+   restrict it to them and check its total covers those members rather than
+   the whole dataset.
    7b. The function answers one question: what is this
    variable's value for an interval, given the interval's parts? Flows
    (amounts that accumulate) sum. Stocks (states sampled at instants —
@@ -149,7 +151,9 @@ Treat the engine laws as facts and the method, workflow, and recipes as guidance
 9.  A **table block** is a view definition, not data: two ordered trees of
     "break down by \_\_\_" rules called axes, one tree for rows, one for columns.
     One axis node carries one variable or dimension. Nesting a child axis under a parent is
-    **drilling in**; the chain reads "Revenue by Region by Product".
+    **drilling in**; the chain reads "Revenue by Region by Product". A figure
+    that is part of another belongs nested beneath it, not beside it as a
+    peer that reads as something to add on.
 10. **Pivoting is placement, nothing else.** Moving an axis between rows and
     columns changes only where its items render. The rule itself (property,
     filter, sort, granularity, children) is untouched. Corollary: the moved
@@ -166,12 +170,7 @@ Treat the engine laws as facts and the method, workflow, and recipes as guidance
     dimension-mapping table or a database view, where the shared breakdown is the long
     entity axis and the value entries are its few attributes; keyed by a chart
     of accounts, the untransposed mapping is one row and hundreds of columns.
-    Any other table transposes only on an explicit ask. Only in the `table_config` escape hatch do
-    you swap the complete root trees by hand. For example, `rows: Revenue >
-Region; cols: Date` becomes `rows: Date; cols: Revenue > Region`. Change
-    every moved node's row/column type, while preserving the tree's entry,
-    filter, ordering, and child hierarchy. Each child's `parentId` must still
-    name its parent in that same moved tree.
+    Any other table transposes only on an explicit ask.
 11. **The variable lives on exactly one side.** Along any crossing of a row path
     and a column path there must be at most one variable, and it cannot appear
     on both sides. A cell is that variable evaluated at (row segment × column
@@ -258,15 +257,17 @@ Region; cols: Date` becomes `rows: Date; cols: Revenue > Region`. Change
 17. **Saving is lenient; calculating is strict.** Many broken configs save
     fine and only fail (or silently misrender) at calc time. The strict
     write paths guard this for you — a view is checked before anything
-    persists, a config-JSON create validates inside the write, and every formula
-    write validates each item before applying any of it — so skip separate
-    pre-validation steps: write directly and iterate on the per-item
-    errors a write reports (references/07-modeling-method.md step 6). Formula
-    writes default to `mode: "partial"`, which applies the items that pass and
-    reports the rest; pass `mode: "atomic"` when the batch has to land whole.
-    The one lenient survivor is a config-JSON reconfiguration; pre-flight that
-    one by calling `edit_model_views` with `dry_run` on the candidate
-    config (references/06-validity.md §6.3).
+    persists, and every formula write validates each item before applying any
+    of it — so skip separate pre-validation steps: write directly and iterate
+    on the per-item errors a write reports (references/07-modeling-method.md
+    step 6). Formula writes default to `mode: "partial"`, which applies the
+    items that pass and reports the rest; pass `mode: "atomic"` when the batch
+    has to land whole. `dry_run` answers the same question a write answers
+    without persisting, for a write you want to check first
+    (references/06-validity.md §6.1). Both are call-scoped — they sit at the
+    top level beside `change`, not inside the block. `edit_variables`
+    `change.operations` honors `mode` (atomic runs the batch in one
+    transaction) but has no `dry_run`, and refuses one by name.
 
 ### The correspondence
 
@@ -307,7 +308,12 @@ so the folklore transfers:
     do not understand it yet. A rendered signature, a config JSON, and the
     spoken title are interchangeable renderings of that sentence: reason
     at the sentence level, and never mistake a rendering's bookkeeping
-    (node ids, condition ordering) for the meaning.
+    (node ids, condition ordering) for the meaning. Where sources overlap,
+    name the system of record first — the ledger for money, the roster for
+    people and their departments — and look for a shared key before adopting
+    one source's labels as the dimension. Overlapping sources also restate
+    each other's figures, so check whether one already contains the other
+    before adding them together.
 19. **Reuse before you build.** Existing blocks record the grains this
     workspace already uses. Survey the block dictionary first: one
     `inspect_table_blocks` `ask.list` read returns each table's signature (formula-lane-only blocks have none).
@@ -391,28 +397,29 @@ so the folklore transfers:
 
 Load only the file matching the task below.
 
-| When the task involves...                                                                                                                                                                                                          | Read                                         |
-| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------- |
-| what variables, dimensions, items, and segments are; where data comes from                                                                                                                                                         | `references/01-the-dimensional-universe.md`  |
-| writing, editing, or explaining formulas; debugging a number                                                                                                                                                                       | `references/02-formulas.md`                  |
-| designing or editing a block; axes, nesting, drill-ins; the block signature; reading a large block window by window                                                                                                                | `references/03-table-blocks.md`              |
-| dates, granularity, actuals vs forecast, period comparisons                                                                                                                                                                        | `references/04-time.md`                      |
-| scenarios, snapshots, budget vs actuals, as-of                                                                                                                                                                                     | `references/05-scenarios-and-comparisons.md` |
-| a config that errors, renders blank, or shows misleading numbers                                                                                                                                                                   | `references/06-validity.md`                  |
-| the step-by-step procedure for any modeling request                                                                                                                                                                                | `references/07-modeling-method.md`           |
-| a concrete config shape to copy (with JSON)                                                                                                                                                                                        | `references/08-recipes.md`                   |
-| before writing formulas for a table carrying breakdowns; after adding a drill-in; which layer a formula belongs at; why a drilled row shows zeros; authoring order and consolidating hand-typed plans                              | `references/09-the-layer-model.md`           |
-| acting on a groupby/pivot/SQL analogy near aggregation, scenario overrides, overlapping formulas, offsets, or cross-grain totals                                                                                                   | `references/10-deviations.md`                |
-| declaring or reading table structure as a view; the shape the tools speak                                                                                                                                                          | `references/11-block-grammar.md`             |
-| changing an existing block — window narrows/widens, reslices, edit vs duplicate                                                                                                                                                    | `references/12-editing-blocks.md`            |
-| creating a variable that averages, counts, rates, or accumulates                                                                                                                                                                   | `references/13-metric-recipes.md`            |
-| dimension mappings: grouping one dimension's items under another; the table that shows one; formulas that read a mapped item; changing what a mapping is keyed by (the value-axis mapping is `references/03-table-blocks.md` §3.6) | `references/14-dimension-mappings.md`        |
-| a symptom that matches a known platform defect rather than your design                                                                                                                                                             | `references/limitations.md`                  |
+| When the task involves...                                                                                                                                                                                                                                                         | Read                                         |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------- |
+| what variables, dimensions, items, and segments are; where data comes from                                                                                                                                                                                                        | `references/01-the-dimensional-universe.md`  |
+| writing, editing, or explaining formulas; debugging a number                                                                                                                                                                                                                      | `references/02-formulas.md`                  |
+| designing or editing a block; axes, nesting, drill-ins; the block signature; reading a large block window by window                                                                                                                                                               | `references/03-table-blocks.md`              |
+| dates, granularity, actuals vs forecast, period comparisons                                                                                                                                                                                                                       | `references/04-time.md`                      |
+| scenarios, snapshots, budget vs actuals, as-of                                                                                                                                                                                                                                    | `references/05-scenarios-and-comparisons.md` |
+| a config that errors, renders blank, or shows misleading numbers                                                                                                                                                                                                                  | `references/06-validity.md`                  |
+| the step-by-step procedure for any modeling request                                                                                                                                                                                                                               | `references/07-modeling-method.md`           |
+| a concrete config shape to copy (with JSON)                                                                                                                                                                                                                                       | `references/08-recipes.md`                   |
+| before writing formulas for a table carrying breakdowns; after adding a drill-in; which layer a formula belongs at; why a drilled row shows zeros; authoring order and consolidating hand-typed plans                                                                             | `references/09-the-layer-model.md`           |
+| acting on a groupby/pivot/SQL analogy near aggregation, scenario overrides, overlapping formulas, offsets, or cross-grain totals                                                                                                                                                  | `references/10-deviations.md`                |
+| declaring or reading table structure as a view; the shape the tools speak                                                                                                                                                                                                         | `references/11-block-grammar.md`             |
+| changing an existing block — window narrows/widens, reslices, edit vs duplicate                                                                                                                                                                                                   | `references/12-editing-blocks.md`            |
+| creating a variable that averages, counts, rates, or accumulates                                                                                                                                                                                                                  | `references/13-metric-recipes.md`            |
+| dimension mappings: grouping one dimension's items under another; the table that shows one; formulas that read a mapped item; changing what a mapping is keyed by; removing rows or retiring one source's lookup (the value-axis mapping is `references/03-table-blocks.md` §3.6) | `references/14-dimension-mappings.md`        |
+| a symptom that matches a known platform defect rather than your design                                                                                                                                                                                                            | `references/limitations.md`                  |
 
 Name resolution: fall back to `resolve` `ask.grammar` only when the two dictionary reads
 (`inspect_variables`, `inspect_dimensions`) cannot answer, and never
 re-search a name they already answered. Absence
-is not proof an entry is gone — listings are best-effort. The
+is not proof an entry is gone: a listing drops what you cannot read, and a
+truncated one says `showing N of M`. The
 `build-model` manual carries the full rule (the `resolve` `ask.grammar` fallbacks, how
 dimension items page, and the grammar tokens each read hands back).
 
@@ -425,5 +432,4 @@ path sets which part applies:
 | block builds and edits through a view (`view` on any `edit_model_views` write)                                     | this skill plus the tool schemas are enough                                                      |
 | presentation edits on one named block — rename, column widths, hide/show, window, comparison (`edit_table_blocks`) | `references/12-editing-blocks.md`                                                                |
 | ranked / top-N / who-moved questions (`inspect_model_views` `ask.rank`)                                            | a query, not a build: ask, don't build; nothing persists (`references/03-table-blocks.md` §3.8b) |
-| block needs structure a view cannot describe — the `table_config` escape hatch (`edit_model_views`)                | `references/12-editing-blocks.md` §12.6, plus the tool schemas                                   |
 | formula writes (`edit_variables` operations, set_values, set_time_rollup)                                          | `build-model`                                                                                    |

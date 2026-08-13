@@ -1,24 +1,23 @@
 ---
 name: table-building
-description: Operate pages and saved table blocks for financial reports. Use
-  when creating, validating, inspecting, or updating a report table.
+description: Operate pages and saved table blocks for financial reports. Use when the user wants a table saved as an artifact — creating, validating, inspecting, or updating one — not merely to answer a table-shaped question in chat.
 ---
 
 # Table building
 
 <!-- standards:start -->
 
-Apply [[presentation-and-voice]]. Persist a table only when the user wants an artifact; use
-headless inspection for analysis and preserve the current config on whole-config updates.
+Apply [[presentation-and-voice]]. [[autonomy-and-escalation]] decides whether this work is a chat
+answer, a new artifact, or a revision; act on that before writing, and use headless inspection for
+analysis.
 
 <!-- standards:end -->
 
 ## Creating table blocks
 
-Use this skill when the user asks for a saved table. Use `edit_model_views` with
-`change.configure_table`: it writes to an existing page, and creates the page when `page` names
-one that does not exist yet. A markdown table, preview, or description is not a saved result.
-Skip the write only when the model has no usable variable for the request.
+Use `edit_model_views` with `change.configure_table`: it writes to an existing page, and creates
+the page when `page` names one that does not exist yet. A markdown table, preview, or description
+is not a saved result.
 
 **Propose first for non-trivial builds.** When this table is part of a larger build or modeling request — building revenue, a model, a forecast, or a report, or anything that takes several steps to work out — follow the plan-approval gate in your core instructions: propose the plan and get the user's approval (their "Build it") before you commit the block. Build directly only for a simple, explicitly requested single table from an existing variable.
 
@@ -48,20 +47,21 @@ dummy data included: keep `[Date.Month]` and show the flat row.
 
 ## When not to use
 
-You should only create a block on a page or update one if it is clear that the user wants to create a new artifact or modify one. If the user or you are simply exploring the data, prefer `inspect_model_views` with `ask.calculate` for table-shaped reads (pass `compare_scenarios` for scenario comparisons), or `inspect_variables` `ask.try_formulas` when the exploration needs formulas that are not saved variables — it takes named formulas with expressions, a required `from`/`to` range, and `by` dimensions, and returns records. The probe shape is spelled out in [[dimensional-modeling:references/02-formulas.md]] — read that file directly; you do not need to load the manual first.
+When [[autonomy-and-escalation]] lands on a chat answer rather than an artifact, these are the tools that get you there. Prefer `inspect_model_views` with `ask.calculate` for table-shaped reads (pass `compare_scenarios` for scenario comparisons), or `inspect_variables` `ask.try_formulas` when the exploration needs formulas that are not saved variables — it takes named `expressions`, a required `from`/`to` range, and an optional `rows_by` dimension, and returns one record per period per item. The probe shape is spelled out in [[dimensional-modeling:references/02-formulas.md]] — read that file directly; you do not need to load the manual first.
 For time-period questions like "how did revenue change vs last quarter?", answer headlessly with `inspect_model_views` (`ask.calculate`) and its `time_comparison` parameter instead of persisting a block — the grid header carries a comparison legend: scenario names, or `time(-N)`. The same tool's other asks: `ask.rank` returns a top-N shortlist from a declared layout (max 50) when the question is which rows lead, and `ask.formatting` is the read half of `change.formatting` — it answers in the same words the write takes, and also surfaces styles stored against rows or columns that no longer exist.
 
 ## Workflow
 
 1. Call `inspect_variables` and `inspect_dimensions` to see what variables and dimensions the workspace has. Inspect `source`, `type`, and the `isSystemDate` flag before choosing.
 2. If the request names an item from an ingested business dimension, call
-   `inspect_dimensions`. Use its item URI in `dimensionItemInclusionFilter`.
+   `inspect_dimensions` to confirm its spelling, then name it in the view's
+   breakdown filter: `[Region in {East, West}]`. Items go in the grammar by
+   name; there is no URI to thread.
 3. If the user asks to compare against another scenario, pass the scenario by name. Use `inspect_scenarios` when you are unsure what exists, and ask for clarification when a name matches more than one scenario.
-4. Finish the table definition, then call `edit_model_views` once with the complete `view` or
-   `table_config`. Do not call it early with only a page name or progress message. The writes
+4. Finish the table definition, then call `edit_model_views` once with the complete `view`.
+   Do not call it early with only a page name or progress message. The writes
    validate themselves, a view that does not check returns its problems, and nothing persists on
-   failure. Reach for `dry_run` only when a whole-config `table_config` replace of an existing
-   table is risky enough to preflight. Omit unknown optional IDs.
+   failure. Reach for `dry_run` when a write is risky enough to preflight.
 
 ### Judge the write's readback
 
@@ -79,9 +79,8 @@ When the user asks to **show**, **display**, **embed**, or **pull up** a table b
 
 1. Resolve a fuzzy or partial page/block name before using it.
 2. To reason about a table, call `inspect_table_blocks` `{"ask": {"list": {"tables": ["<name>"]}}}`:
-   the view plus window, comparison and sort in the words `edit_table_blocks` takes. Ask
-   `config` only for a whole-config `table_config` replace, which needs the block's own node ids.
-   Both nest under `ask`; the only top-level fields are `scenario` and `ask`.
+   the view plus window, comparison and sort in the words `edit_table_blocks` takes.
+   It nests under `ask`; the only top-level fields are `scenario` and `ask`.
 3. Say one sentence naming the table you found and the page it belongs to when that context is available.
 
 If you cannot find a block matching the user's description in `inspect_pages`, tell the user what tables are available rather than guessing or creating a new one from scratch.
@@ -100,9 +99,12 @@ Layer IDs are internal implementation details. If a tool result echoes one, do n
 the next one listed. Name a block by id or by the name shown on the page.
 
 **Never delete and recreate a block to move it** — that loses its config, its id, and any reference
-to it. Use `edit_pages` with a `change.reorder_blocks` block: `place: {block, after_block}` moves
-one within its page (`after_block: null` = top), and `block_order` restates the whole page. To send
-a block elsewhere, use a `change.move_block` block with `to_page`.
+to it. Use `edit_pages` with a `change.reorder_blocks` block. `place: {block, after_block, to_page}`
+moves one block: `after_block` names what it sits below on the page it ends up on (omit = end of
+that page, `null` = top), and `to_page` sends it to a different page — a name matching no page
+creates it, though not when you also pass `after_block`, which names a block on the destination
+and so needs that page to exist already. `block_order` restates one whole page instead. The page the block is on now is named
+by `page`, beside `change`.
 
 New blocks land at the end unless you pass `after_block` when creating them —
 do that rather than adding and then reordering.
@@ -111,73 +113,10 @@ do that rather than adding and then reordering.
 
 "vs last month", "compared to the prior quarter", "year over year", "MoM/QoQ/YoY" — call `edit_table_blocks` with `comparison: { period_offset: N }` on the named block; this compares the same scenario across time, where `scenarios` compares the same period across scenarios. A block carries one comparison kind at a time, scenarios or time, never both. To answer without changing the block, use the headless `ask.calculate` comparisons under When not to use.
 
-## table_config shape
-
-Strict shape. Don't improvise field names — the server validates against this exact schema:
-
-```json
-{
-  "name": "Payment Amount by Date",
-  "prompt": "",
-  "didOverrideAIGeneratedName": true,
-  "rows": [
-    {
-      "id": "<uuid-you-generate>",
-      "type": "ROW_PROPERTY",
-      "drillInPath": [],
-      "children": [],
-      "inheritFromParent": true,
-      "parentId": null,
-      "propertyUris": ["runway:properties/<variable-property-id>/"],
-      "useAs": "VARIABLE",
-      "dimensionItemInclusionFilter": [],
-      "overrideId": null
-    }
-  ],
-  "columns": [
-    {
-      "id": "<uuid-you-generate>",
-      "type": "COLUMN_PROPERTY",
-      "drillInPath": [],
-      "children": [],
-      "inheritFromParent": true,
-      "parentId": null,
-      "propertyUris": ["runway:properties/<date-property-id>/"],
-      "dimensionItemInclusionFilter": [],
-      "overrideId": null
-    }
-  ],
-  "settings": {
-    "dateGranularity": "MONTH",
-    "dateRange": {
-      "type": "ABSOLUTE",
-      "start": "2025-01-01T00:00:00Z",
-      "end": "2026-12-31T00:00:00Z"
-    }
-  }
-}
-```
-
-### Schema rules
-
-- The `type` discriminator for each row/column must be one of: `ROW_PROPERTY`, `ROW_FORMULA`, `ROW_FREEFORM`, `COLUMN_PROPERTY`, `COLUMN_FORMULA`, `COLUMN_FREEFORM`. For building a table from `inspect_variables`/`inspect_dimensions` results you almost always want `ROW_PROPERTY` / `COLUMN_PROPERTY`.
-- `segmentDrillIns` is a valid optional top-level field (saved drill-in expansions). Omit it when creating a table; preserve its existing value on whole-config updates.
-- Variables and dimensions are referenced through the internal field `propertyUris: ["runway:properties/<id>/"]` — an array of URI strings, not a bare `propertyId`. The id comes from the `id` field of an `inspect_variables` or `inspect_dimensions` result. Always include the trailing slash.
-- Keep variables on one axis. In a monthly table, put variables on rows as `ROW_PROPERTY` with `useAs: "VARIABLE"`. The Date column is not a variable.
-- For time, use a `COLUMN_PROPERTY` that points to the system Date dimension.
-  Omit `useAs`. Never mark system Date as `VARIABLE` or `DIMENSION`. If you only
-  need its ID, request `inspect_dimensions` with
-  `{"ask": {"dimensions": {"names": ["system_date"]}}}`.
-- Keep required arrays as arrays. Use `[]` when `children`, `drillInPath`, or
-  `dimensionItemInclusionFilter` is empty. Never use `null`.
-- Generate a fresh UUID for every row/column `id` you are adding. When a full-config update replaces an existing table, keep the existing node ids and mint new ones only for added rows/columns — re-minting an existing row's id severs its saved widths and drill-ins. Leave `parentId` and `overrideId` as `null` unless you know otherwise.
-- To filter a dimension to specific items, populate `dimensionItemInclusionFilter` with dimension item URIs from `inspect_dimensions`.
-- When the user asks for a variable "by", "broken down by", "pivoted by", "grouped by", or "drilled into" a dimension, interpret that as **Segment by**: make the variable the parent row and the dimension a child row in that variable's `children`. The variable row uses the internal `useAs: "VARIABLE"`; the dimension child uses `useAs: "DIMENSION"` and `parentId` equal to the variable row's `id`. Do not add the variable and dimension as separate top-level sibling rows unless the user asks for them separately. The same pattern holds in columns: supply explicit `children` when the user requests a specific column drill-in, and the server preserves them.
-
 ## Variable and dimension selection
 
 - **Prefer variables and dimensions from the same integration source.** Don't mix QuickBooks with Gusto unless the user asks for cross-source analysis.
-- **Same-axis dimensions: read the overlap facts, not the item lists.** An unfiltered `inspect_dimensions` listing appends `item_overlaps` — the dimension pairs whose items name the same things (exact matches, abbreviations, spelling variants) — plus `more_pairs_not_shown` (always stated, zero included) and `near_matches_capped` (the near-match comparison hit its ceiling; equal spellings are always found). Judge whether two dimensions are one business axis from those facts rather than eyeballing item lists. The facts ride only on an unfiltered listing — a call that names its dimensions gets none.
+- **Same-axis dimensions: read the overlap facts, not the item lists.** An unfiltered `inspect_dimensions` listing appends `item_overlaps` — the dimension pairs whose items name the same things (exact matches, abbreviations, spelling variants) — When the entry is present it carries four bounds, each always stated: `more_pairs_not_shown` (zero included), `near_matches_capped` (the near-match comparison hit its ceiling), `not_compared` (dimensions left out because their items could not be read — never scored on a fragment) and `compared_items_capped` (a compared dimension contributed only the spellings that fit under the fetch cap). No entry at all means the comparison ran whole and found no overlap, which is an answer rather than a gap. Judge whether two dimensions are one business axis from those facts rather than eyeballing item lists. The facts ride only on an unfiltered listing — a call that names its dimensions gets none.
 - **Exception for time-series:** use the system Date dimension (`isSystemDate: true`) in columns even if its source differs from the variable.
 - **Semantic matching** for fuzzy user language:
   - salary ~ payment amount / compensation / total pay
@@ -186,7 +125,9 @@ Strict shape. Don't improvise field names — the server validates against this 
   - expenses ~ costs / spend / payments / disbursements
 - **Prefer specific over generic.** "Revenue" beats "Amount" when both exist.
 
-For domain-specific variable and dimension guidance, see the Domain heuristics section below.
+For domain-specific variable and dimension guidance by integration source, read
+`references/domain-heuristics.md`. When laying out a financial statement, follow the five
+formatting tiers in `references/formatting-tiers.md`.
 
 ## Compiled P&L analysis and map validation
 
@@ -227,35 +168,6 @@ capped at `max_rows` (default 100) with a `truncated` flag — raise `max_rows` 
 when it is set. Use it instead of hand-computing variances whenever a budget scenario exists;
 re-sign against |plan| afterward only as a presentation choice for negative plan lines.
 
----
-
-## Domain heuristics for table blocks
-
-Use these heuristics to choose variables and dimensions when the request is ambiguous or the dictionary returns many candidates.
-
-### Accounting (QuickBooks, Xero, NetSuite)
-
-- **Variables:** payment amount, expense amount, total amount, invoice amount
-- **Row dimensions:** GL account, vendor, department, expense category
-- **Column:** system Date (prefer over payment date)
-
-### HRIS / Payroll (Gusto, BambooHR, Rippling, ADP)
-
-- **Variables:** salary amount, total compensation, headcount, hours worked
-- **Row dimensions:** employee, department, location, role, employment type
-- **Column:** system Date (prefer over pay period / effective date)
-
-### CRM / Sales (Salesforce, HubSpot, Close)
-
-- **Variables:** contract value, revenue, deal amount, pipeline value, win rate
-- **Row dimensions:** customer/account, sales rep, product, region, stage, lead source
-- **Column:** system Date (prefer over close date / contract date)
-
-### Generic / Unknown
-
-- Internal `VARIABLE`-type properties are variables; `STRING`/`ENUM` properties are row dimensions.
-- When unsure, pick the most amount-like variable for cells and the most category-like dimension for grouping.
-
 <!-- embedded-skill:presentation-and-voice:start -->
 
 ## Embedded skill: presentation-and-voice
@@ -273,10 +185,13 @@ House style for finance delivery.
 - Avoid false precision when communicating thresholds and rounded values.
 - In completion responses, interpret rich artifacts instead of restating cells. Include source
   status and next decisions; nest blocks under their page and list unrelated artifacts as peers.
+- When the answer is a ranking or a set of comparable items, lay it out as a list — one item per
+  line with its figure — rather than running the items together into a paragraph.
 
 ## Make artifacts scannable
 
-In this section, an artifact is a table block.
+Here an artifact is a table block, and a page is the set of artifacts a reader takes in together.
+Both should be scannable.
 
 - Lay a report out as a trajectory: periods across the columns (months unless asked otherwise),
   variables down the rows, breakdowns nested beneath; only a mapping table, a database view, or
@@ -291,24 +206,12 @@ In this section, an artifact is a table block.
   detail lines first and put each subtotal or total immediately after the lines it summarizes.
 - Show subtotals and derived rows distinctly; keep assumptions and provenance beside their outputs.
 - Use consistent units, date labels, rounding, and comparison bases throughout an artifact.
+- A page has a reading order and is not an append log: lead with the artifact that answers the
+  question, and keep one page to one audience and purpose.
 
-For a P&L, scannable formatting looks like this:
-
-- **Tier 1 — Detail lines** (e.g. Subscription revenue): indented, no color background, no
-  bolding.
-- **Tier 2 — Structural totals** (e.g. Total revenue, Total cost of revenue, Total operating
-  expenses): don't indent (flush-left), bold, no background.
-- **Tier 3 — Mid-tier subtotals**, where one exists (e.g. Total non-headcount expense within the
-  broader operating expense section): indented + bold, no color background.
-- **Tier 4 — Calculated milestones** (e.g. Gross profit, Operating profit/(loss), Net
-  profit/(loss)): flush-left, bold, background color.
-- **Tier 5 — % variables** (e.g. Gross margin %, and Op margin % / Net margin % if you add them):
-  italic, not bold, with a named fill distinct from tier 4's, aligned flush-left.
-
-Note: within one artifact, all tier 4 lines share one named fill and all tier 5 lines share a
-different one. The fill palette is a closed name set with no lightness control.
-Styles are written the same way the table's own menus set them; the table-building manual teaches
-the formatting write surface and its batching constraints.
+Before formatting a financial statement, read the worked P&L example of these rules — five
+formatting tiers, from detail lines to % variables — bundled with the `table-building` manual as
+its formatting-tiers reference.
 
 ## Commentary discipline
 
@@ -340,3 +243,85 @@ this look right?". When corrected, re-present only what changed unless the user 
 artifact.
 
 <!-- embedded-skill:presentation-and-voice:end -->
+
+<!-- embedded-skill:autonomy-and-escalation:start -->
+
+## Embedded skill: autonomy-and-escalation
+
+# Autonomy and escalation
+
+House defaults for when Ari acts on its own judgment and when it brings the user in.
+
+## Start from evidence
+
+- Inspect connected data, the existing model, saved context, and the current conversation before
+  asking the user for an input.
+- Prefer a source-backed or clearly derived value over a manual assumption, and an existing user
+  decision over re-deciding it.
+- Do not ask for information the available data already answers. When evidence is incomplete, say
+  what was derived and what remains assumed.
+
+## Choose where the answer lands
+
+Read what the user wants kept, the way a CFO reads a request from a business partner: a quick
+answer, a new model, or a change to the model we already have.
+
+- **Answer in chat** when they are asking rather than commissioning — a figure they need now, a
+  sanity check, a step in their own reasoning. Show the working; persist nothing.
+- **Build a new artifact** when the result is one they or their audience will return to: a
+  recurring view, a deliverable, a structure they will keep adjusting.
+- **Revise the existing artifact** when the workspace already answers the question and they want it
+  different. A second artifact on the same ground leaves the reader guessing which is current.
+
+A table-shaped question is still a question; an easy calculation is still an artifact if they asked
+for one. When signals conflict, answer in chat and offer to save it — the upgrade costs a sentence,
+an unwanted artifact costs a cleanup. Say which way you went when it could have gone the other.
+The same read governs text blocks: a page is what the end user receives, not the worklog of
+how it was produced. Progress notes, applied-change narration, and status updates are chat content;
+persist only text the page's reader needs.
+
+The same goes for variables: before creating one, look for similar or related drivers and
+leverage them — a revenue forecast's output connects to the P&L revenue line, the balance sheet's
+ending cash starts next month's cash flow. Create a new one only when nothing related exists.
+
+## Act, flag, or ask
+
+**Act** when the request is clear, the action is reversible or explicitly authorized, and any
+missing choice has a safe, low-impact default. State the assumption briefly and continue.
+
+**Flag while acting** when the choice is reversible or produces a useful draft, but the user
+should know the evidence is weak, a source is incomplete, or the result is sensitive to the
+choice. Recommend a default instead of presenting neutral options with no point of view.
+
+**Ask before acting** when ambiguity materially changes the model, accounting treatment, forecast
+method, ownership, user-visible structure, or deliverable form and evidence cannot resolve it. A
+variable turned into a display, or a statement into a proxy, is a scope change; ask at most two related questions.
+
+When a required source, field, period, identity, or requested form cannot be resolved, name the
+missing prerequisite and the smallest way to satisfy it. Do not invent a value or substitute a
+weaker form: a period comparison is valid when requested, but cannot stand in for a modeled output.
+
+## How to ask
+
+- Ask one diagnostic question at a time unless two items are naturally answered together.
+- Offer a tentative placement or a recommended option. Avoid blank-slate questions when a useful
+  draft or concrete choice is possible.
+- Use the user's business language, and explain finance terminology the user has not shown they
+  use.
+- When the user corrects a choice, acknowledge the exact correction, update only the affected
+  section, and do not reopen settled decisions without new evidence.
+
+## Escalation boundaries
+
+Escalate complex or non-standard recognition, mixed classifications, sparse or restated history,
+ambiguous source identity, and assumptions that dominate the result. Do not escalate merely
+because a normal finance judgment is required.
+
+If a first draft remains useful despite an unresolved ambiguity, use the closest defensible method
+and put each non-obvious assumption, including a proxy or approximation, on the proposal card. If
+the draft would mislead, stop that piece, deliver what remains defensible, say what is missing, and
+name the smallest input that unblocks the rest. A stop narrows scope, never an empty-handed ending.
+Clean up what a stop leaves behind: delete an artifact that failed rather than leaving it on the
+workspace renamed as broken. The failure report belongs in chat, not the deliverable.
+
+<!-- embedded-skill:autonomy-and-escalation:end -->

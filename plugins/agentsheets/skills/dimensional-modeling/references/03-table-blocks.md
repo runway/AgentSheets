@@ -69,11 +69,9 @@ else.** The entry, filter, sort, granularity, children, and pinning all
 travel with it. The grain of every cell is the union of its row path and
 column path dimensions, and unions do not care which side a dimension came
 from. "Revenue by Region over Months" and "Revenue by Months over Region"
-contain identical numbers, transposed. To flip the whole table, swap its
-complete root trees: `rows: Revenue > Region; cols: Date` becomes `rows:
-Date; cols: Revenue > Region`. Change the row/column type of every moved node,
-preserve each subtree's hierarchy and knobs, and keep every child `parentId`
-anchored to its parent in that same subtree. Pivot moves are always safe.
+contain identical numbers, transposed. To flip the whole table, say
+`transpose: true` on the view: it swaps which half renders as rows and
+changes nothing else. Pivot moves are always safe.
 
 There is no per-move edit vocabulary. A structural edit — including a pivot —
 restates the whole view: `edit_model_views` `change.configure_table`, naming the
@@ -213,9 +211,9 @@ it.
 
 ## 3.9 The block signature
 
-A block has one meaning and several renderings: the sentence you say
-("Gross Margin % by Region and Product, monthly over 2026"), the **view**,
-and the config JSON. The view is the rendering the tools speak;
+A block has one meaning and two renderings: the sentence you say
+("Gross Margin % by Region and Product, monthly over 2026") and the
+**view**. The view is the rendering the tools speak;
 references/11-block-grammar.md defines it, and the breakdown spelling is
 normative in [[build-model:references/grammar-reference.md]], the
 generated grammar reference.

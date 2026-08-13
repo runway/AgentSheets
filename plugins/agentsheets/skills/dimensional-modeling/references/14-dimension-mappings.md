@@ -64,7 +64,7 @@ One mapping input has three parts:
 
 Under the hood the engine stores one conditioned formula per row on Bucket,
 and the conditions themselves declare the mapping's keys.
-`change.mapping` writes those formulas for you. Think in the table.
+`edit_dimension_mappings` writes those formulas for you. Think in the table.
 
 ## 14.2 Two keys, and which rule wins
 
@@ -130,31 +130,36 @@ and build the structure on the second occurrence — the inverse law above.
 
 ## 14.4 Author it
 
-`edit_dimensions` `change.mapping` writes a whole lookup in one call. The
-single-key table from §14.1, verbatim:
+`edit_dimension_mappings` writes one lookup per call, and every call names the
+lookup it addresses: the target plus the keys. It reaches no other lookup on
+that target, so several sources each mapping into one dimension is a call each.
+
+The single-key table from §14.1, verbatim:
 
 ```json
 {
   "change": {
-    "mapping": {
+    "map": {
       "target_dimension": "Bucket",
-      "source_dimensions": ["Account"],
-      "items": { "5001": "COGS", "5002": "COGS", "6001": "Payroll" },
-      "otherwise": "Other"
+      "keys": ["Account"],
+      "items": { "5001": "COGS", "5002": "COGS", "6001": "Payroll" }
     }
   }
 }
 ```
 
-`items` is the one-key shorthand: source item to target item. The two-key
-table from §14.2 needs `rules`, one entry per row:
+`items` is the one-key shorthand: source item to target item. The catch-all is
+its own call, because one fallback serves every lookup into the target:
+`{"change": {"catch_all": {"target_dimension": "Bucket", "item": "Other"}}}`.
+
+The two-key table from §14.2 needs `rules`, one entry per row:
 
 ```json
 {
   "change": {
-    "mapping": {
+    "map": {
       "target_dimension": "Bucket",
-      "source_dimensions": ["Account", "Region"],
+      "keys": ["Account", "Region"],
       "rules": [
         {
           "match": { "Account": "7001", "Region": "US" },
@@ -162,63 +167,88 @@ table from §14.2 needs `rules`, one entry per row:
         },
         { "match": { "Account": "7001" }, "item": "Intl Opex" },
         { "match": { "Account": "5001" }, "item": "COGS" }
-      ],
-      "otherwise": "Other"
+      ]
     }
   }
 }
 ```
 
-A `match` pins keys by item name, no formula quoting, and a key it leaves out
-is open (§14.2). For a term richer than "equals this item" — a set, a range,
-a negation — a rule takes `condition` instead, in the same grammar as a
-formula condition, brackets and all:
-`{"condition": "$[Account in {\"8001\", \"8002\"}]", "item": "Misc"}`.
-The `$` form claims exactly the dimensions named; a bare `[…]` is a subset
-condition, which also matches after the mapping gains a source dimension —
-the conditioned analogue of an open `match` key. Either way a rule declares
-only the narrowest grain named by its predicates.
+A `match` pins keys by item name, no formula quoting; a key it leaves out is
+open (§14.2). For a term richer than "equals this item" — a set, a range, a
+negation — a rule takes `condition` instead, in the same grammar as a formula
+condition, brackets and all:
+`{"condition": "$[Account in {\"8001\", \"8002\"}, Region in any]", "item": "Misc"}`.
+One difference: a condition must name **every** key, opening one with
+`in any` — condition text is stored as written, and a row naming fewer keys
+would belong to a different lookup.
+
+`map` writes and retargets; it never removes. The removals are their own
+intents, so what a call deletes is what it named:
+
+- `unmap` removes rows: `at` takes coordinates the way `match` does, and
+  `conditions` takes the condition text the read returns for rows a coordinate
+  cannot address. A coordinate that matches no row comes back under
+  `not_found` rather than failing the call.
+- `drop_mapping` retires one whole lookup — that source no longer maps —
+  naming the keys so it can never mean the whole target.
 
 What the write refuses, so refusals are predictable:
 
-- a rule naming a dimension outside `source_dimensions` — a row cannot
-  widen what the lookup is keyed by, whichever way the row is spelled;
+- a rule naming a dimension outside `keys` — a row cannot widen what the
+  lookup is keyed by;
+- a `condition` that leaves a key out (a `match` may omit keys — they are
+  opened for you; a condition opens one with `in any`);
+- keys that share some but not all of an existing lookup's keys: where both
+  apply neither is more specific, so there is no defined winner;
 - the target as its own key;
 - a repeated key;
 - a variable as the target;
 - a mapped item that does not read as the target's data type — it would
   become a null member;
-- a mapping given none of `items`, `rules`, or `otherwise`;
+- a `map` given neither `items` nor `rules`;
 - a target whose items already come from a set formula.
+
+The overlap refusal is what a misremembered key set produces — the one shape
+the engine leaves undefined. Nested keys are allowed: the richer rows win
+where both apply, and the echo says so.
 
 The last refusal is a boundary between mechanisms: a direct set-member
 domain and condition-inferred mapping inputs are separate
 dimension-definition mechanisms. A plain source-backed dimension is fine;
 conditioned formulas may supplement or override its imported values.
 
-The echo restates the lookup as written:
+The echo counts what the transaction did, never what the request asked for:
 
 ```json
 {
   "success": true,
+  "change": "map",
   "target_dimension": "Bucket",
-  "source_dimensions": ["…account-id…", "…region-id…"],
-  "rules_written": 3,
-  "target_items": ["COGS", "Domestic Opex", "Intl Opex", "Other"],
+  "keys": ["Account", "Region"],
+  "rows_created": 3,
+  "rows_updated": 0,
+  "rows_removed": 0,
+  "removed": [],
+  "other_inputs": [{ "keys": ["Class"], "row_count": 22 }],
+  "target_items": ["COGS", "Domestic Opex", "Intl Opex"],
   "catch_all": "Other",
   "tables": [{ "block_id": "…", "name": "Bucket mapping", "page_id": "…" }]
 }
 ```
 
-Read it before moving on. `source_dimensions` echoed back means the keys took.
-`tables` is every block that shows this mapping — no need to go looking. An
-empty `tables` means nothing shows it yet, which is the cue for §14.5.
+Read it before moving on. `rows_removed: 0` says the write removed nothing.
+`other_inputs` is the target's other lookups, untouched — the check that a
+write reached only its own. An empty `tables` means nothing shows this mapping
+yet: the cue for §14.5.
 
 ## 14.5 The table users see
 
 A mapping is formulas, and nobody reads formulas. The table is how a user sees
 one — and it is a live view of the rules, not a copy, so it cannot drift and
 there is nothing to keep in sync.
+
+Build it with `edit_model_views` `change.configure_table`, omitting `table` so
+the entry creates one rather than reconfiguring an existing block:
 
 ```json
 {
@@ -259,8 +289,8 @@ missing input-specific block only when needed.
 The table is also the verification. The echo reports what was _declared_; the
 table shows what _resolves_ against the coordinates the data actually has, and
 nothing knows those until the table calculates. A blank Bucket cell is an
-account nobody bucketed: surface those and offer `otherwise` or new rules
-rather than reporting the mapping done.
+account nobody bucketed: surface those and offer a `change.catch_all` or new
+rules rather than reporting the mapping done.
 
 To verify without creating a block, run the same `view` through
 `inspect_model_views` `ask.calculate`: it computes the same table headlessly
@@ -272,40 +302,58 @@ Widening one input from `[Account]` to `[Account, Region]` restates that input's
 conditions at the composite grain — the keys are the conditions (§14.1),
 and nothing else declares them.
 
-`change.mapping` merges by default: written rows land beside the target's
-existing rows, updating only a row at the same condition. A rekeying passes
-`replace: true`, which clears the rows the new mapping does not restate
-(items already registered stay). Forgetting it leaves the old single-key
-rules live, still winning the specificity contest wherever they pin more
-than the new rows.
+It is two calls, and the order matters. **Write the new lookup first**, then
+retire the old one:
 
-Carry the old rules forward as wildcard rules in the same call: restated under
-the new keys, `5001 → COGS` is `{"match": {"Account": "5001"}, "item": "COGS"}`,
-where the unnamed Region key is open — `"*"` opens the slot explicitly if you
-prefer to spell it. Then add the pairs that motivated the widening
-(`{"match": {"Account": "7001", "Region": "US"}, "item": "Domestic Opex"}`);
-they win over the open rules exactly where they pin more (§14.2).
+1. Read the lookup you are widening. Its `pairs` paste straight back.
+2. `map` at the new keys, carrying the old rows forward with the new key open:
+   `5001 → COGS` becomes `{"match": {"Account": "5001"}, "item": "COGS"}`,
+   where the unnamed Region key is open (`"*"` spells it explicitly). Then add
+   the rows that motivated the widening, like
+   `{"match": {"Account": "7001", "Region": "US"}, "item": "Domestic Opex"}`;
+   they win over the open rows exactly where they pin more (§14.2). The echo
+   warns that the new lookup nests inside the old one.
+3. `drop_mapping` on `["Account"]` retires the old lookup. **Retiring is a
+   choice, not a default:** nested lookups have a defined winner, so the
+   narrow one may stay — it then catches imports that carry no Region, and
+   acts as a per-account fallback where the wide table is silent. Drop it when
+   every import carries the new key and misses should fall to the catch-all.
+
+The order is what makes a crash between the calls harmless: both lookups
+coexisting is a defined state, while dropping first would leave the source
+mapping to nothing.
+
+One behaviour to expect. A row storing `Region in any` applies where the data
+carries a Region. An import with an Account column and no Region column matched
+the old bare `[Account = "5001"]` row and does not match the widened one, so it
+falls to the catch-all — keep the narrow lookup if that data still needs an
+answer.
 
 Update the same table's breakdown to `[Account, Region]`. Still one table.
 
 ## 14.7 Reading one back
 
-`inspect_dimensions` `ask.mapping` returns the rules as
-`Bucket[Account = "5001"] = "COGS"` lines. An empty answer
-means the dimension has no mapping — its items come from its source or from
-added items instead. That emptiness is trustworthy: generated defaults are
-filtered out, so it is a real answer, not an artifact.
+`inspect_dimension_mappings` returns one entry per lookup. Single-key
+equalities come back as `pairs` (`{"5001": "COGS"}`), which paste straight
+into `change.map`. Everything else — sets, negation, `where`, every row of a
+multi-key lookup — comes back as `rows`, each a `condition` plus an `item`;
+`change.unmap` takes the condition verbatim. An empty answer means the
+dimension has no mapping — its items come from its source or from added items
+— and it is trustworthy, because generated defaults are filtered out.
+
+The read carries `tables` too, the write echo's list. Rules present but
+`tables` empty means the mapping works and nobody can see it: build §14.5's
+table.
 
 ## 14.8 What to watch for
 
-**Config-JSON writes promote bare dimension columns.** A hand-authored
-`table_config` gets `useAs: VARIABLE` written onto any top-level dimension
-column that has none, so a config can acquire a mapping marker nobody typed and
-then trip the rule that values live on one axis. The view path does not do
-this. Prefer a view.
+**A bare dimension column can acquire a mapping marker.** A top-level
+dimension column with no `useAs` gets `VARIABLE` written onto it, which trips
+the rule that values live on one axis. The view path does not do this, so a
+block reaching that state came from UI-authored structure.
 
 **Mapping cells compute but are not yet click-editable.** Users read the table;
-changes still go through `change.mapping`.
+changes still go through `edit_dimension_mappings`.
 
 **A lookup probe that returns the catch-all for every key is reporting where
 it asked, not what the mapping says.** Probe `Bucket[Account = "5001"]`
@@ -374,11 +422,10 @@ item from the key's own value:
 Bucket[Account in any] = if(this.Account = "5001", "COGS", if(this.Account = "6001", "Payroll", "Other"))
 ```
 
-Computed forms are read-only: no write tool authors one — a
-`change.mapping` row maps to a fixed item, never an expression, and
-`change.set_values` writes variables only. Reads still echo one from
-models that carry it. An if-chain like this
-loses nothing to that limit — it is exactly two rows and an `otherwise`.
+Computed forms are read-only: no write tool authors one — a mapping row maps
+to a fixed item, never an expression, and `change.set_values` writes variables
+only. Reads still echo one from models that carry it. An if-chain like this
+loses nothing to that limit — it is exactly two rows and a catch-all.
 
 The one computation rows cannot spell is the key's own label. The
 **same-name rule**
@@ -409,10 +456,11 @@ source; no request will say "mapping".
    its rules declare as a manual item in the same transaction, so pre-adding
    items is only for canonical items no rule produces yet.
 2. **One mapping input per source.** Read the source's items and write one
-   `change.mapping` input per source: an `items` pair per already-matching
-   label (`"Renewal": "Renewal"`), explicit pairs where a label differs, and
-   `otherwise` only when a catch-all is truly meant — it would hide unmatched
-   keys. The same-name rule would cover matching labels unenumerated,
+   `map` call per source: an `items` pair per already-matching
+   label (`"Renewal": "Renewal"`) and explicit pairs where a label differs.
+   A fallback is a second call, `change.catch_all` — add one only when truly
+   meant, since it hides unmatched keys. The same-name rule would cover
+   matching labels unenumerated,
    but it is read-only (§14.9), so a label the source adds later maps
    nothing until the pairs are re-written; the mapping table's blank cells
    reveal any key still unmatched (§14.5).
