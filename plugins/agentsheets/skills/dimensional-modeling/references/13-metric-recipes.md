@@ -299,9 +299,9 @@ A formula write returns a top-level `warnings` list covering six families.
 The write still succeeds; each warning names a shape with a known fix, so
 route by family:
 
-- **A non-sum aggregate over a no-fan-out reference** — the identity-over-
-  rollup anti-pattern. Match the ask to §13.2 and aggregate the source
-  column, not the variable.
+- **A non-sum aggregate over a no-fan-out reference** — the
+  identity-over-rollup anti-pattern. Match the ask to §13.2 and aggregate
+  the source column, not the variable.
 - **An unfloored recurrence** (nothing supplies the first value) — seed it:
   the running-balance recipe at the top of references/limitations.md.
 - **A recurrence started from a pinned date** — fine monthly, wrong at

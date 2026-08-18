@@ -1,7 +1,7 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "agentsheets",
-  "version": "0.1.1+geb516b2",
+  "version": "0.1.2+g2c0d57a",
   "description": "Model in cfo.ai from your agent: dimensional modeling, formulas, tables, and charts, backed by the cfo.ai MCP server.",
   "author": "cfo.ai",
   "homepage": "https://cfo.ai",

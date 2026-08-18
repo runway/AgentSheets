@@ -143,7 +143,7 @@ bounds-composed write stores `$`.
   (each drilled dimension as an `in any` term, Date at the model's base
   grain) plus the same `period` — the subset rule covers every richer grain
   that retains those dimensions, however deep the drilling goes.
-  condition-plus-period requires exactly that base-grain Date term; an
+  A condition-plus-period write requires exactly that base-grain Date term; an
   off-base grain is rejected rather than stored dead. `segments` naming each
   drilled dimension as an open slot ({"Department": "\*"}) plus `period`
   remains as coordinate sugar — stored exact, one grain. See

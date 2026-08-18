@@ -19,7 +19,11 @@ reason from the laws and be creative.
 
 <!-- standards:start -->
 
-Treat the engine laws as facts and the method, workflow, and recipes as guidance; resolve variable names from `inspect_variables` and dimension names from `inspect_dimensions` in one parallel round; name the grains a table will evaluate and say which formula answers each before writing formulas for anything carrying a breakdown; and check a symptom against the known limitations reference before redesigning a model that is already correct.
+Treat the engine laws as facts and the method, workflow, and recipes as guidance. Resolve variable
+names from `inspect_variables` and dimension names from `inspect_dimensions` in one parallel round.
+Before writing formulas for anything carrying a breakdown, name the grains the table will evaluate
+and say which formula answers each. Check a symptom against the known limitations reference before
+redesigning a model that is already correct.
 
 <!-- standards:end -->
 
@@ -44,9 +48,17 @@ Treat the engine laws as facts and the method, workflow, and recipes as guidance
    instead be **mapped** from another dimension: a lookup saying which Bucket
    each Account belongs to, which is how GL accounts become P&L buckets. A
    **dimension mapping** — distinct from the value-axis mapping of axiom 11 —
-   states a classification once, as structure the whole model can
-   address — a judgment that would otherwise repeat across formulas, filters,
-   or hand-grouped tables wants to be one; a one-off arrangement does not.
+   states a classification once, as structure the whole model can address. A
+   judgment that would otherwise repeat across formulas, filters, or
+   hand-grouped tables wants to be a mapping; a one-off arrangement does not.
+   It is also the only classification a breakdown can follow: a bracket term
+   replaces the cell's coordinate on the dimension it names (axiom 6), so a
+   formula that enumerates a dimension's items (`D in {…}`) repeats its
+   parent value on every row of a D breakdown, while a filter through the
+   mapped dimension composes with that coordinate. A classification of items
+   anyone will segment by is therefore a mapping even on first use —
+   statement lines bucketing GL accounts are the standing case
+   (references/14-dimension-mappings.md §14.1).
    Mapping inputs are inferred from the distinct nonempty condition grains on
    those dimension formulas; there is no separate root declaration. A
    dimension's authored items come from a direct set formula or from a mapping,
@@ -122,6 +134,20 @@ Treat the engine laws as facts and the method, workflow, and recipes as guidance
    (axiom 20d). And the setting can silently revert: a source sync can
    clobber an explicit choice back to do-not-aggregate, so read the setting
    back after syncs (references/limitations.md §1).
+   7d. **A breakdown does not allocate a formula-defined parent.** Unless a
+   formula dispatches at the added dimension grain, the parent expression
+   evaluates once for each item and repeats the parent value down the rows.
+   A formula whose own filter names the drilled dimension repeats the parent
+   the same way — its term replaces each row's coordinate (axiom 6), the
+   struck-through coordinate chip in the formula editor; classify through a
+   dimension mapping instead (references/14-dimension-mappings.md §14.1).
+   Use the source-backed variable for account-level detail; when the model
+   needs an explicit total, define it over the open dimension:
+
+   ```formula
+   sum(Amount[Account in any])
+   ```
+
 8. Time offsets come in two kinds, and only one needs a floor — an
    earliest cell that resolves without the self-reference. An offset
    LOOKUP reads another variable's prior cell (`Revenue[-1]` inside a
@@ -235,7 +261,10 @@ Treat the engine laws as facts and the method, workflow, and recipes as guidance
 14. **Last close** is the movable frontier between actuals and forecast. The
     system Actuals and Forecast formula ranges split a variable's formulas
     around it: history usually reads source data, the future is projected. A
-    range-scoped formula carries a Date term to hold its window. Written as
+    known event after Last close still belongs to the Forecast regime. Write
+    it there and label it as a post-close observed input; never author a
+    post-close Actuals formula. A range-scoped formula carries a Date term to
+    hold its window. Written as
     `[Date.<grain> in any]`, that rule reaches every segmentation containing the
     Date grain, including drilled rows; written as `$[Date.<grain> in any]`, it
     stays on the unsegmented time row (references/limitations.md §7). Choose
@@ -350,7 +379,7 @@ so the folklore transfers:
         same way after you create ten variables to hold it — except now the ten
         variables exist. Variables outlive the design they were made for, so a
         failed build leaves the workspace carrying entries nobody asked for and
-        nobody will recognise later. The ephemeral run costs one call.
+        nobody will recognize later. The ephemeral run costs one call.
 
     20c. **When a read fails and you cannot say why, simplify the read.** Re-run
     the same ask smaller: drop the breakdown, narrow the window, keep one

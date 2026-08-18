@@ -4,17 +4,22 @@ A mapping answers questions such as “Which Bucket contains each GL account?”
 It is a lookup table owned by the target dimension. Define it once, then use it
 in every table, formula, and breakdown.
 
-Use a mapping when a classification should be reused: accounts into COGS,
-customers into Enterprise, or states into EMEA. Without a mapping, the same
-rule gets copied into conditions, formulas, and tables that can drift apart.
-**If a classification will be used twice or outlive one answer, make it a mapping.**
+A mapping does two jobs no formula filter can. It states a classification
+**once, as structure** — a judgment that would otherwise be copied into
+conditions, formulas, and tables that drift apart. And it keeps the classified
+axis **addressable**: a formula that filters through a mapped dimension still
+follows every breakdown of the source dimension, while a formula that
+enumerates the source items instead disconnects from that axis and repeats
+the parent value down every drilled row. §14.1 is the mechanism; it is the
+reason this file exists.
 
-Mappings cover any “derive one axis from another” rule: cleaning source items (three
-spellings of one vendor becoming one clean item), consolidating one concept
-scattered across imports (three sources' event columns all landing in one Event
-dimension — §14.10), tiering (customers into Enterprise, Mid, SMB), rollups
-(state to region to theater), hierarchies by chaining one mapping through
-another (Account to Bucket to statement line).
+Mappings cover any “derive one axis from another” rule: cleaning source items
+(three spellings of one vendor becoming one clean item), consolidating one
+concept scattered across imports (three sources' event columns all landing in
+one Event dimension — §14.10), tiering (customers into Enterprise, Mid, SMB),
+rollups (state to region to theater), hierarchies by chaining one mapping
+through another (Account to Bucket to statement line), and — always —
+bucketing accounts into financial-statement lines.
 The user may not say “mapping.” Recognize the relationship.
 
 One neighbor is not a mapping: renaming. When an item's own
@@ -24,13 +29,58 @@ places that reference it. It takes user-created items only; an imported label
 is the source's to change, and canonicalizing imported labels is exactly the
 mapping above.
 
-Do not create a mapping for a temporary grouping. Use a view or ranked read,
-then create the mapping if the same classification is needed again.
-
 Read this file when grouping one dimension under another, showing or editing a
-grouping, or changing an existing mapping's keys.
+grouping, changing an existing mapping's keys — or when a drilled table
+repeats its parent's value on every child row, which is the signature of a
+filter doing a mapping's job (§14.1, §14.8).
 
-## 14.1 The lookup, on paper
+## 14.1 Why a filter cannot do a mapping's job
+
+The engine evaluates one formula text at every cell of a breakdown and adapts
+it to each cell through the cell's own address: references are **relative by
+default** (axiom 6). Before a reference runs at a cell, the engine completes
+it with one term per dimension of the cell's grain — `Amount` at an
+account-A row becomes `Amount[Account = this Account, Date = this Date]` —
+which is why a single default formula gives every drilled row its own number.
+The formula editor shows these synthesized terms as filter chips labeled
+“derived from this cell's coordinates.”
+
+A bracket term the formula writes itself takes that dimension over
+completely. For each dimension exactly one term survives: the formula's
+explicit term when it names the dimension, the synthesized `this` term
+otherwise. **Replacement, never intersection** — replacement is what lets a
+formula escape its own address at all (`Revenue[Region = "East"]` read from a
+West cell; a share-of-total denominator). The editor draws the rule: the
+coordinate chip renders struck through when the formula names the same
+dimension. The engine cannot tell “aim elsewhere” from “restrict my own
+axis” — both are spelled as a bracket term — so it always aims.
+
+The consequence decides when a mapping is mandatory. Watch both shapes in a
+model with three accounts — A = 10, B = 20, C = 30, with A and B mapped to
+bucket R — each broken down by Account:
+
+```formula
+naive  = sum(Amount[Account in {"A", "B"}])
+mapped = sum(Amount[Bucket = "R"])
+```
+
+Both parents read 30. `naive` names Account, so at every child row the
+explicit set replaces the row's own Account coordinate: the read is identical
+everywhere, and every row — C included, though it is not in the set — shows
+30, the parent total. The row's coordinate appears nowhere in the read, so it
+cannot even fail to match: nothing shows 0 and nothing filters out. `mapped`
+names only Bucket, which the cell does not pin, so the synthesized
+`Account = this Account` term survives beside the bucket term: A shows 10,
+B shows 20, and C — mapped elsewhere, its allowed account set empty — matches
+nothing and drops out of the breakdown. Same totals at the parent; only one
+shape survives a drill-in.
+
+**A filter that enumerates items of a dimension spends that axis: every cell
+the formula serves loses its own coordinate on it. A mapping states the same
+classification on a derived dimension, so a filter through it composes with
+the source axis — for every breakdown that exists now or later.**
+
+## 14.2 The lookup, on paper
 
 A mapping from Account to Bucket is this table, and nothing more:
 
@@ -53,8 +103,6 @@ One mapping input has three parts:
 Under the hood the engine stores one conditioned formula per row on Bucket,
 and the conditions themselves declare the mapping's keys.
 `edit_dimension_mappings` writes those formulas for you. Think in the table.
-
-## 14.2 Two keys, and which rule wins
 
 Keys can be several dimensions. "The bucket depends on the account _and_ the
 region" is this table:
@@ -92,15 +140,35 @@ composite key or separate the relations rather than relying on order.
 
 ## 14.3 Is the request a mapping at all?
 
-Three constructions answer "group these", and choosing is a question about the
-knowledge rather than the wording: how far does the judgment reach, and how
-long does it live?
+Three constructions answer "group these." Choosing starts from addressing,
+not wording: what will ever address the result, and by which dimensions?
 
-**A mapping**, when it reaches beyond one view and outlives one answer.
-"Bucket our GLs into COGS and Opex, then show payroll by bucket" — the second
-half is evidence of reach, but reach is often silent: a grouping that three
-formulas will each need has the same claim on structure whether or not anyone
-says "everywhere".
+**The primary test fires before any formula is written.** A formula about to
+enumerate items of a dimension — `Account in {…}`, an IF chain over accounts,
+a hand-kept list — is a classification stored as a filter, and §14.1 prices
+that: the filter spends the enumerated axis. So ask: **will anything address
+this variable by that dimension — a breakdown, a drill-in, a segmented read —
+while the rule is in force?** If yes, the classification is a mapping, even
+when it is used exactly once, in one formula, on one page. Reuse is
+irrelevant to this test; one use plus one drill-in already repeats the parent
+on every row.
+
+Financial statements answer yes by construction. Statement lines partition
+the account dimension, and "which accounts make up this line?" is the first
+drill-in every statement receives. P&L and balance-sheet lines therefore sum
+through a bucket mapping (`sum(Amount[Bucket = "COGS"])`), never through
+account filter sets.
+
+**Reuse is the secondary signal.** A classification that will be used twice
+or outlive one answer wants to be structure even when nothing segments by its
+key: the same judgment copied into conditions, formulas, and tables drifts
+apart. In an existing model, the signs that a mapping is already owed: the
+same item set repeated across conditions (`Account in {"5001", "5002"}` in
+three formulas), an IF chain classifying a dimension's items, a grouping
+maintained by hand in a table. Extracting the mapping usually deletes more
+than it adds.
+
+The other two constructions carry the cases both tests decline:
 
 **Row nesting**, when it is one view's arrangement. "Show accounts grouped
 under region" is `[Region, Account]` on that table's breakdown; it says
@@ -109,12 +177,9 @@ nothing about the model.
 **A ranked read**, when it dies with the answer. "Which accounts are biggest"
 is `inspect_model_views` `ask.rank`; nothing is saved.
 
-In an existing model, the signals that a mapping is already owed rather than
-newly requested: the same item set repeated across conditions
-(`Account in {"5001", "5002"}` in three formulas), an IF chain classifying a
-dimension's items, a grouping maintained by hand in a table. Extracting the
-mapping usually deletes more than it adds. When genuinely unsure, answer first
-and build the structure on the second occurrence — the inverse law above.
+Do not create a mapping for a temporary grouping. When both tests say no and
+reach is genuinely uncertain, answer first and build the structure on the
+second occurrence.
 
 ## 14.4 Write a mapping
 
@@ -122,7 +187,7 @@ and build the structure on the second occurrence — the inverse law above.
 lookup it addresses: the target plus the keys. It reaches no other lookup on
 that target, so several sources each mapping into one dimension is a call each.
 
-The single-key table from §14.1, verbatim:
+The single-key table from §14.2, verbatim:
 
 ```json
 {
@@ -248,8 +313,8 @@ the entry creates one rather than reconfiguring an existing block:
 }
 ```
 
-That renders §14.1's table live: accounts down the rows, each one's Bucket
-beside it. The dimension sits on the value axis (the position a variable
+That renders §14.2's single-key table live: accounts down the rows, each one's
+Bucket beside it. The dimension sits on the value axis (the position a variable
 normally occupies), the keys on the breakdown. A mapping-only view lays itself
 out this way — transposed — without being asked; `transpose: false` overrules
 it, and `change.transpose` on `edit_table_blocks` flips a block that already
@@ -291,7 +356,7 @@ and saves nothing.
 ## 14.6 Changing the keys
 
 Widening one input from `[Account]` to `[Account, Region]` restates that input's
-conditions at the composite grain — the keys are the conditions (§14.1),
+conditions at the composite grain — the keys are the conditions (§14.2),
 and nothing else declares them.
 
 It is two calls, and the order matters. **Write the new lookup first**, then
@@ -315,7 +380,7 @@ The order is what makes a crash between the calls harmless: both lookups
 coexisting is a defined state, while dropping first would leave the source
 mapping to nothing.
 
-One behaviour to expect. A row storing `Region in any` applies where the data
+One behavior to expect. A row storing `Region in any` applies where the data
 carries a Region. An import with an Account column and no Region column matched
 the old bare `[Account = "5001"]` row and does not match the widened one, so it
 falls to the catch-all — keep the narrow lookup if that data still needs an
@@ -338,6 +403,17 @@ The read carries `tables` too, the write echo's list. Rules present but
 table.
 
 ## 14.8 What to watch for
+
+**Every drilled row repeating the parent's value is a filter spending the
+breakdown axis.** The variable's formula names the drilled dimension in its
+own filter, so the explicit term replaces each row's coordinate and the read
+is identical at every child — items outside the filter set included, since a
+coordinate that never enters the read cannot fail to match (§14.1). The fix
+is never to patch the rows: move the classification into a mapping and filter
+through the mapped dimension. The same symptom without any filter is axiom
+7d's (a formula-defined parent with no rule at the drilled grain); the filter
+case is distinguishable by the struck-through coordinate chip in the formula
+editor.
 
 **A bare dimension column can acquire a mapping marker.** A top-level
 dimension column with no `useAs` gets `VARIABLE` written onto it, which trips
@@ -368,7 +444,7 @@ the reverse-lookup filter — are §14.9's.
 ## 14.9 Using a mapping in formulas
 
 Once the mapping exists, formulas read it wherever they can look anything up.
-With §14.1's table in place:
+With §14.2's single-key table in place:
 
 | You write                             | You get                                                                                             |
 | ------------------------------------- | --------------------------------------------------------------------------------------------------- |
@@ -377,6 +453,10 @@ With §14.1's table in place:
 | `sum(Amount[Bucket = "COGS"])`        | imported Amount summed over every account the mapping puts in COGS                                  |
 | `Units[Account.Bucket = this.Bucket]` | on Bucket rows: Units summed over each bucket's accounts — right even with no imported rows (§14.9) |
 | `if(this.Bucket = "COGS", Amount, 0)` | branch on the mapped item inside another formula                                                    |
+
+Every row of this table stays correct under any breakdown of the key
+dimension, because each filters a mapped dimension and never the key itself:
+the key's coordinate keeps inheriting (§14.1).
 
 The hop resolves through the mapping at the key's own grain — the bare key
 coordinate, no date attached — so it is correct at any cell that carries the
@@ -394,7 +474,7 @@ item, which is why `sum(Amount[Bucket = "COGS"])` needs no list of accounts.
 That reverse form works when the variable's values come from imported rows
 carrying the key. A variable whose values come only from formulas needs the
 explicit reverse-lookup filter spelling from the table above instead. Take
-two variables in §14.1's model. `Amount` is an imported ledger column: its
+two variables in §14.2's model. `Amount` is an imported ledger column: its
 values arrive as transaction rows, each tagged with an Account. Broken down
 by Bucket, the engine groups those rows by each account's bucket and adds
 them up — the COGS row is the total of every COGS-mapped account's rows.

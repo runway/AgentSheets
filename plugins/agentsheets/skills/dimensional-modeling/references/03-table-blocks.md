@@ -142,7 +142,7 @@ crossed with itself) yields silent blanks, not errors.
   The prompt preserves what the table was asked to be.
 - **Date range and granularity** (references/04-time.md): the visible time window and default
   time bucket, both block-level with per-axis overrides.
-- **Comparison state** (references/04-time.md/references/05-scenarios-and-comparisons.md): scenario comparison or time comparison,
+- **Comparison state** (references/04-time.md and references/05-scenarios-and-comparisons.md): scenario comparison or time comparison,
   mutually exclusive, plus which measures (value, variance, variance %) are
   visible.
 - **Hidden axes** hide a breakdown's rendering only; hidden axes still

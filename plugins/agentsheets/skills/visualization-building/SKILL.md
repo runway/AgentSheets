@@ -7,9 +7,39 @@ description: Create, check, review, or update pages, charts, and custom visuals.
 
 <!-- standards:start -->
 
-Decide whether this work is a chat answer, a new artifact, or a revision. Choose the smallest visual that makes the
-relationship clearer, and use the product's branded display system. Before offering a visual,
-confirm that the required variables exist. If they do not, name the missing data.
+Decide whether this work is a chat answer, a new artifact, or a revision. Choose the smallest visual
+that makes the relationship clearer, and use the product's branded display system. Before offering
+a visual, confirm that the required variables exist. If they do not, name the missing data.
+
+Treat the first saved version as presentation-ready, not as a wireframe. Apply this polish pass to
+every new or substantially revised code block before writing it:
+
+- Match a supplied reference or the page's strongest existing visual. Preserve established cards,
+  ordering, spacing, and formats unless the user asks for a redesign.
+- Make each independently movable visual its own code block. Combine visuals only when they form one
+  deliberate composition; give peers equal widths and heights and align their plot areas.
+- Use one compact title and, only when it adds context, one short subtitle. Do not repeat the same
+  heading in the block, a card, and the chart. Keep header chrome from crowding the plot.
+- Start a normal chart at 320 pixels high. Give waterfalls, angled category labels, and dense charts
+  more height. Center a deliberately narrow visual; otherwise use the available width and remove
+  dead space around or below it.
+- Put direct value labels on bars, columns, waterfalls, and other sparse marks when the labels remain
+  legible. Prefer labels above positive bars and inside only when there is enough room. Let dense
+  charts rely on a clean axis and tooltip rather than overlapping labels.
+- Format every visible number for its meaning: currency with a symbol and thousands separators,
+  negatives in parentheses, percentages as percentages, and counts without useless decimals. Use
+  the same format in axes, data labels, KPI cards, tables, and totals.
+- Keep axes complete but quiet. Show readable category or date ticks and formatted value ticks. Add
+  an axis title only when the heading and tick labels do not already explain it, and add a visible
+  zero reference line when crossing zero changes the meaning. Never emit an empty title.
+- Remove non-data clutter before rendering: null or `None` buckets, zero-only series when zero is not
+  meaningful, empty cards, duplicate labels, and default legend entries that explain chart mechanics
+  instead of business data. Keep a clear fallback for a genuinely empty or failed dataset.
+- Use the branded palette. Give peer series distinct colors, keep the same metric the same color
+  across related charts, and reserve positive/negative colors for financial meaning.
+- Reconcile a bridge before drawing it: beginning total plus signed changes must equal the ending
+  total. Show the beginning and ending totals as totals, omit immaterial zero steps, and format the
+  value axis and direct labels consistently.
 
 <!-- standards:end -->
 
@@ -150,12 +180,11 @@ variable into series across it. Keep both, or the chart loses its time axis:
 Each department arrives as its own entry in `series` (see the `data` contract
 below).
 
-Two things follow from declaring datasets this way, and both save you calls:
-
-- **The model checks your view before anything is written.** Misspell a
-  variable and the call is rejected with the name that failed; no block is
-  created. The alternative — a block that saves cleanly and then renders an
-  error where the chart should be — cannot happen.
+Declaring datasets this way means **the model checks your view before anything
+is written**. Misspell a variable and the call is rejected with the name that
+failed; no block is created. The alternative — a block that saves cleanly and
+then renders an error where the chart should be — cannot happen. The other
+thing the declaration buys you is the readback, below.
 
 ### Check the readback before you report the visual
 
@@ -310,12 +339,7 @@ highlight) so the SAME code serves every scenario with different settings.
 ### Injected scope (globals available in your code — no import needed)
 
 - `React` — for hooks if you need them.
-- `Chart` — the preferred chart component. Pass normal AG Charts `options` (`data`, `series`, `axes`, `listeners`). It automatically applies CFO.ai's branded AG Charts theme, transparent background, default chart-block palette, tooltip styling, and enterprise chart modules (including ChartBlock types like Nightingale and Waterfall). You usually do **not** need `options.theme`. To size a chart, pass a `height` prop in pixels (`<Chart height={350} options={...} />`); it defaults to the theme's `charts.defaultHeight` (240). `options.height` works the same way; the `height` prop wins when both are given. One resolved height drives both the chart's layout box and its canvas, so a taller chart pushes content below it down instead of painting over it.
-  Axis titles are opt-in: pass `axes[].title` only with meaningful `text`
-  (e.g. `title: { text: "ARR ($)" }`), and only when the axis is not already
-  self-explanatory from its labels and the block's heading — dates and dollar
-  ticks rarely need one. Never pass a `title` object without `text`: AG Charts
-  auto-enables it and renders a literal "Axis Title" placeholder.
+- `Chart` — the preferred chart component. Pass normal AG Charts `options` (`data`, `series`, `axes`, `listeners`). It automatically applies CFO.ai's branded AG Charts theme, transparent background, default chart-block palette, tooltip styling, and enterprise chart modules (including ChartBlock types like Nightingale and Waterfall). You usually do **not** need `options.theme`. To size a chart, pass a `height` prop in pixels (`<Chart height={350} options={...} />`); it defaults to the theme's `charts.defaultHeight` (240). `options.height` works the same way; the `height` prop wins when both are given. One resolved height drives both the chart's layout box and its canvas, so a taller chart pushes content below it down instead of painting over it. Apply the axis-title judgment in the standards above. Never pass a `title` object without meaningful `text`: AG Charts auto-enables it and renders a literal "Axis Title" placeholder.
 - `AgCharts` — compatibility alias for older saved blocks only. Do not use it
   in new or updated CodeBlock source; use `Chart` so chart colors, background,
   axes, tooltip chrome, and dark-mode updates stay connected to CFO.ai tokens.
@@ -341,6 +365,8 @@ Raw color literals (`#...`, `rgb(...)`, `hsl(...)`, `oklch(...)`) are rejected.
 ```jsx
 function Block({ data, theme }) {
   const rows = (data.revenue && data.revenue.rows) || [];
+  const money = (value) =>
+    "$" + Math.round(Number(value) || 0).toLocaleString();
   return (
     <Card>
       <Row>
@@ -348,9 +374,25 @@ function Block({ data, theme }) {
         <Stat label="vs Plan" value="+3.1%" delta="-0.4%" />
       </Row>
       <Chart
+        height={320}
         options={{
           data: rows,
-          series: [{ type: "bar", xKey: "date", yKey: "value" }],
+          series: [
+            {
+              type: "bar",
+              xKey: "date",
+              yKey: "value",
+              label: { enabled: true, formatter: ({ value }) => money(value) },
+            },
+          ],
+          axes: [
+            { type: "category", position: "bottom" },
+            {
+              type: "number",
+              position: "left",
+              label: { formatter: ({ value }) => money(value) },
+            },
+          ],
         }}
       />
     </Card>
@@ -363,20 +405,22 @@ function Block({ data, theme }) {
 ```jsx
 function Block({ data, theme }) {
   return (
-    <Row>
+    <Row align="stretch">
       {[
         ["NA", data.na],
         ["EMEA", data.emea],
         ["APAC", data.apac],
       ].map(([label, ds]) => (
-        <Chart
-          key={label}
-          options={{
-            title: { text: label },
-            data: (ds && ds.rows) || [],
-            series: [{ type: "line", xKey: "date", yKey: "value" }],
-          }}
-        />
+        <Col key={label} style={{ flex: 1, minWidth: 0 }}>
+          <Text variant="title">{label}</Text>
+          <Chart
+            height={300}
+            options={{
+              data: (ds && ds.rows) || [],
+              series: [{ type: "line", xKey: "date", yKey: "value" }],
+            }}
+          />
+        </Col>
       ))}
     </Row>
   );

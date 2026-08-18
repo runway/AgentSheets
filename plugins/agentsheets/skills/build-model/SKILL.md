@@ -145,6 +145,34 @@ variables first, then make every derived variable reference those inputs. Do not
 variable and then bypass it with hardcoded output values. When a stable formula can express the
 relationship, do not expand its calculated result into one literal formula per month.
 
+Forecast drivers that apply across the horizon are timeless `[]` constants, not values pinned to
+one month. A month-pinned driver governs only that coordinate, so every other forecast period can
+fall to zero even though the dependent formula is correct.
+
+For a ratio whose denominator can be zero, define a separate total variable and wrap its explicit
+total-over-total formula in `iferror`. Never rely on the ratio variable's recomputed parent: an
+error at that grain leaves the parent unusable even when the child ratios are meaningful.
+
+```formula
+iferror(sum(Profit[Department in any]) / sum(Revenue[Department in any]), NULL)
+```
+
+Prefer a closed-form ramp when the value is a direct function of time. A recurrence can read only
+cells inside the current calculation window, so moving the window past its seed can change the
+answer or zero the series; the closed form returns the same value for the same period in any
+window.
+
+Until the grammar has a cumulative-sum primitive, build a cumulative balance from an event ledger
+with Form 1 below: calculate one source-bound `Net Events` variable per period, use
+`Cumulative Balance` as the stock and `Net Events` as its change driver, and put the single seed at
+the first period of the supported window or formula range. Keep the event date, status, and amount
+bound to the imported source. Set each coarser time grain to roll up with `LAST`, then verify the
+seed period, a later period, and one coarser closing balance.
+
+The no-literals rule also governs interactive builds. Transcribing source dates or amounts into an
+`if()` chain is a failed build even when the displayed values match; unpivot and re-ingest the
+source, or bind the formula to its imported variables instead.
+
 A monthly roll-forward (cash balance, customer count, any running total) is computed as whatever it
 was last period plus what changed this period. Before writing one, pick which of the three forms
 below fits, from what the user actually said. Pick first; do not discover the form through failed attempts.
@@ -307,7 +335,7 @@ to duplicate the compiled logic in the playbook.
    In `change.set_values`, `expression` and `condition` are the grammar fields: the variable, the bounds and the segments are all data, and the tool assembles the address from them. So you never escape a name to say _which_ variable to write, only to reference one _inside_ a formula. Both spellings are accepted in a name field, so a name copied out of a formula still resolves; write the plain one. Backticks are the only part you drop — a repeated name still needs its `#a3f`, in a name field as much as in a formula, and the refusal hands you the prefix to use.
 
 2. **Use readable variable and dimension names in formulas** -- write `Revenue`, `Revenue[Department = "Engineering"]`, `Revenue$`, or `` `Net Revenue` `` instead of property URIs. Plain top-level names and unprefixed bracket predicates inherit the current segment; the bracketed form overrides only the named dimensions. Write `$` after a reference's name (`Revenue$`) only when it must be absolute and must not inherit the current segment. If a name contains spaces, operators, punctuation, or a reserved word, wrap it in backticks. If two variables or dimensions share a name, use the minimal lowercase UUID-hex disambiguator from tool output, e.g. `Revenue#a3f`. For date granularity, append the keyword suffix to the reference, e.g. `Date.Month` or `` `Fiscal Date`#a3f.Quarter ``.
-3. **Aggregation defaults to `sum()` for multi-value lookups** -- if a lookup can return multiple values (e.g., `[DIM in any]`, set membership, or `where` predicates that can return multiple rows), you should wrap it in an aggregation function like `sum()`, `count()`, `average()`, `min()`, or `max()`. If omitted, aggregation defaults to `sum()`.
+3. **Aggregation defaults to `sum()` for multi-value lookups** -- when a lookup can return multiple values (e.g., `[DIM in any]`, set membership, or `where` predicates that can return multiple rows), wrap it in an aggregation function such as `sum()`, `count()`, `average()`, `min()`, or `max()`; if you omit the wrapper, `sum()` is applied.
 4. **Current segment inheritance is implicit** -- omit `this` in normal current segment references. Use `this.<Property>` inside nested expressions, such as `where` filters, when they must compare against the current cell's value.
 5. **Conditions and expressions are separate** -- the condition determines _when_ a formula applies; the expression determines _what_ it computes. Don't conflate them.
 6. **Use the scenario the user is working in** -- formulas are scenario-scoped. Omitting `scenario` writes to the scenario in view, which is almost always what you want. To write elsewhere, pass `scenario`: prefer the name the user says ("Budget 2026"), and pass the id when the user gives you one or when a name matches more than one scenario. A duplicate name is refused with the candidate ids, so pick the intended id from that list rather than guessing.

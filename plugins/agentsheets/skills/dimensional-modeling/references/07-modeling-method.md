@@ -274,7 +274,7 @@ the mistakes that hide behind a grid that looks reasonable:
   `if` — while the children differ is not a rollup: a globally-addressed rule
   owns the collapsed parent, where the dimension tests bind nothing and the
   leftover branch replaces the recomputed aggregate.
-  the `formulas` section attributing the same formula to the parent and
+  The `formulas` section attributing the same formula to the parent and
   its children confirms it (references/10-deviations.md D7).
 - A source-backed variable returns a confident zero, never a blank, for a row
   whose segment has no matching source rows
