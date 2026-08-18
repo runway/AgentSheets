@@ -1,19 +1,15 @@
 # The modeling method
 
-Modeling requests fail in a predictable way: building before understanding.
-A table built from the words of the request instead of the shape of the
-data computes, but does not answer the question. This reference is the
-method that prevents that. It is guidance, not a script: follow it by
-default, skip a step when you already hold its output, reorder or
-improvise when the task genuinely calls for it. Two parts are not
-optional: understand before building, and verify after against the
-numbers you expected.
+Most modeling failures start by building before understanding the data. Use
+this method by default, but skip or reorder steps when you already have their
+output. Two steps are required: understand before building, and verify against
+expected numbers afterward.
 
 ## Step 1 — Frame the question
 
-Before touching tools, write the table's signature (references/03-table-blocks.md §3.9): _variable(s) by
-dimension(s) over time-or-not_, and what decision it serves. Discuss
-design in signatures, not config JSON. Then decide the deliverable:
+First write the table signature (references/03-table-blocks.md §3.9):
+_variable(s) by dimension(s), with or without time_. State the decision it
+supports. Discuss this signature, not config JSON. Then choose the output:
 
 - An existing number or a one-off analysis: do not build anything. Evaluate
   ephemerally (references/02-formulas.md §2.8) and answer in chat.
@@ -22,7 +18,7 @@ design in signatures, not config JSON. Then decide the deliverable:
   add a table, page, or other artifact unless the user asks for one.
 - A ranked or top-N ask ("top 10 customers", "who drove the drop"): an
   `inspect_model_views` `ask.rank` question, never a build. Ask, answer in
-  chat; nothing persists (references/03-table-blocks.md §3.8b).
+  chat; nothing is saved (references/03-table-blocks.md §3.8b).
 - A view someone will return to: a block.
 - A visual (chart, KPI scorecard, custom layout): a code block, fed by
   table-config datasets. Design each dataset's signature with the same
@@ -35,14 +31,15 @@ you have not understood the request yet.
 
 ## Step 2 — Learn the dictionary
 
-Read the workspace's entries before assuming anything exists: **the
-dictionary is two reads, `inspect_variables` and `inspect_dimensions`,
-fired in one parallel round.** Resolve every variable name from the first
+Read workspace entries before assuming they exist. **Read `inspect_variables`
+and `inspect_dimensions` in parallel.** Resolve every variable name from the first
 and every dimension name from the second; fall back to `resolve` `ask.grammar` only when
-the dictionary cannot answer. Absence is not proof of nonexistence: the
-source listing is best-effort, and hand-created items are listed apart,
-under `manual_items`, rather than among the source spellings.
-The `build-model` manual carries the full rule (the `resolve` `ask.grammar` fallbacks and
+the dictionary cannot answer. Absence is not proof of nonexistence: an
+`ask.items` page reports `source_items` — whether the source half of the
+list landed at all — and coordinates pinned to a block are not listed as items
+of any dimension; they are read from the block that shows them.
+Hand-created items are not a separate read; they sit in the same list,
+tagged. The `build-model` manual carries the full rule (the `resolve` `ask.grammar` fallbacks and
 item paging). What matters here is what each entry hands you: its kind,
 data type, and _source_ (which integration query made it), plus three
 lines to copy from the listing instead of re-deriving:
@@ -101,12 +98,13 @@ already uses, and rebuilding forks the truth into two near-identical
 tables.
 
 Item values come from the same two reads: step 2's `items` lines and the
-`# items:` counts here. When a dimension's line shows samples (too many
-spellings to inline) or is absent (the lines are best-effort), `resolve` `ask.grammar`
-for the specific items you need rather than listing everything; there is
-no fuller enumeration to fetch. Copy spellings exactly; filters and pins
+`# items:` counts here. When a dimension's line shows samples rather than
+every spelling, page it with `ask.items` — that is the full enumeration,
+merged across both stores. Reach for `resolve` `ask.grammar` when the
+dimension is too large to page to the value you need, or the line says
+`source items could not be read`. Copy spellings exactly; filters and pins
 match exact strings (references/06-validity.md §6.4.6). Hand-created items
-come back under `manual_items` (step 2); coordinates pinned to a block are
+come back in the same list, tagged (step 2); coordinates pinned to a block are
 not items of any one dimension and are not listed, so for those a missing
 item does not prove absence
 (references/01-the-dimensional-universe.md §1.4). The
@@ -115,13 +113,13 @@ belongs behind a filter, not fanned across columns. If "None" is
 present, decide what uncategorized rows mean for this table and whether
 to filter or surface them.
 
-## Step 4 — Probe only what the listings cannot answer
+## Step 4 — Probe only unanswered questions
 
 The listings answer most probe questions up front: `slicesBy` rules out
 wrong-source fan-outs before anything is built, and the write's readback
 shows real values one call later (step 7). A probe is not a gate before
 every build. Evaluate ephemerally (references/02-formulas.md §2.8; nothing
-persists, and recompute works exactly like saved variables) when the answer
+remains, and recompute works exactly like saved variables) when the answer
 lives in the data and the listings are silent:
 
 - Which date column a variable follows, when its source carries several
@@ -179,7 +177,7 @@ the built table.
 ## Step 6 — Build
 
 Write directly — grammar, formulas, and creates validate themselves and
-persist nothing on error; pre-flight only a config-JSON reconfiguration,
+save nothing on error; pre-flight an update you want to check first,
 with `edit_model_views` `dry_run`. One read first when adding a term-list
 rule: `ask.saved_formulas` on the target variable. If a rule already
 covers that grain and overlaps the new one at equal specificity, the
@@ -198,17 +196,14 @@ the page and its blocks in one batch. Three things to get right:
   reconciles in place: matched structure keeps its axis ids and aggregate
   functions; the formula lane, surviving segment drill-ins, and
   presentation state (widths, hidden axes) carry over; drops come back as
-  warnings. The window range is the one line you must always restate
-  (omitting it is refused); an omitted granularity or layout clears with
-  a warning; an omitted `compare:` carries the existing comparison
-  forward, because comparison is presentation — changing or clearing it
-  is an `edit_table_blocks` call, not a restate
-  (references/12-editing-blocks.md §12.5). A `change.configure_table` entry with
-  `copy_from` gives a reconciled NEW block with the original kept
-  (references/11-block-grammar.md). With table_config the whole-statement
-  rule is literal: fetch, modify, resend; anything omitted is deleted.
-  It is the one place you author node ids, and the tool schema carries
-  their mechanics; a view never needs them.
+  warnings. A view is structure only, so there is no window, granularity or
+  comparison line to restate and no omission that clears one — presentation
+  survives the write, and changing it is an `edit_table_blocks` call
+  (references/12-editing-blocks.md §12.3). The one omission that does change
+  the block is orientation: restate `transpose: true` on a transposed
+  non-mapping block (references/11-block-grammar.md §11.3). A
+  `change.configure_table` entry with `copy_from` gives a reconciled NEW block
+  with the original kept (references/11-block-grammar.md).
 - **Regime-scoped formulas**: write them with `change.set_values` with `period`;
   it resolves the window by name. Reading and moving Last close:
   references/04-time.md §4.5. Regimes you tile by hand (non-book series,
@@ -324,7 +319,7 @@ Gaps in the tooling, with the working substitute.
 | variable value stats (min/max, null rate, freshness)  | ephemeral probes; the day-granularity watermark read                                        |
 | deleting a formula                                    | overwrite it; there is no agent-side formula delete, so a blank or overwrite is the removal |
 
-## The discipline, in six lines
+## Six rules
 
 1. Understand before building; batch independent reads into one round
    (the inspect tools are parallel-safe); probe only what the listings
@@ -334,11 +329,10 @@ Gaps in the tooling, with the working substitute.
 4. Write grammar, formulas, and creates directly (they validate
    themselves); every formula of one intent goes in ONE `change.set_values`
    call — a subset condition covers the richer grains containing it, so
-   items exist per intent, not per grain; pre-flight only
-   a config-JSON update, with `edit_model_views` `dry_run`.
-5. Updates state the whole structure: a view, or whole-config
-   replace; comparison and window changes are `edit_table_blocks`, not a
-   restate.
+   items exist per intent, not per grain; pre-flight an update you want to
+   check first, with `edit_model_views` `dry_run`.
+5. Updates state the whole structure as a view; comparison and window
+   changes are `edit_table_blocks`, not a restate.
 6. Verify from the write's readback, warnings first; reconcile against the
    numbers you expected, and read a mismatch as the model, not the data.
    Report in one sentence.

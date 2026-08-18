@@ -1,12 +1,10 @@
-# The layer model: how a variable's formulas fit together
+# Formula layers
 
-references/02-formulas.md explains how the engine picks one formula per cell.
-This file is about the other direction: which formulas a well-modeled
-variable should carry, and in what order to author them. Dispatch is
-physics; this is architecture. Read it before building anything a user will
-drill into, and read it again when a drilled row shows zeros.
+references/02-formulas.md explains how the engine chooses one formula per cell.
+This file explains which formulas a variable should have and the order to
+write them. Read it before building drillable data and when drilled rows show zeros.
 
-## 9.1 One choice carries this file
+## 9.1 Exact and subset rules
 
 `$[…]` claims exactly its named grain. `[…]` claims every grain containing
 the dimensions it names. `[]` matches every grain, and drilling in adds a
@@ -16,8 +14,7 @@ this file is built on:
 > An exact rule stops at a drill-in; a subset rule follows one that retains
 > its named dimensions.
 
-Watch it play out. Cash Balance carries a seed and a chain formula, both
-written at the month grain:
+Example: Cash Balance has a starting value and chain formula at month grain:
 
 ```
 Cash Balance$[Date.Month = "2026-01"] = 250000
@@ -37,20 +34,18 @@ instead means one independent chain inside every Department, write the chain
 as `[Date.Month in any]` and seed each intended Department at its own starting
 coordinate; that subset condition follows any drill-in that retains Date.
 
-The competent move is to predict this before writing, not to diagnose it
-after. The rest of this file is the discipline that makes the prediction
-automatic.
+Check this before writing instead of diagnosing it afterward.
 
 ## 9.2 The five layers
 
-A variable's formulas form a stack. Dispatch reads it from the top (most
-specific wins); you author it from the bottom.
+A variable's formulas form layers. Dispatch reads from the top, where the most
+specific rule wins. Write from the bottom.
 
 | layer             | condition shape                | covers                                          | written with                         |
 | ----------------- | ------------------------------ | ----------------------------------------------- | ------------------------------------ |
 | 4 exact overrides | `$[…]`, items pinned           | named items of one grain                        | explicit condition or pasted address |
 | 3 shape rules     | `[…]`                          | named dimensions at that and every richer grain | explicit condition                   |
-| 2 time windows    | date term plus a formula range | a time regime, with reach chosen by the sigil   | `period` and bounds or condition     |
+| 2 time windows    | date term plus a formula range | a time regime, with reach chosen by `$`         | `period` and bounds or condition     |
 | 1 the default     | `[]`                           | every grain, present and future                 | no bounds                            |
 | 0 the floor       | generated per grain            | every grain, always                             | the system                           |
 
@@ -93,7 +88,7 @@ find and remove them.
 Month shape wherever those dimensions remain present, including richer
 drill-ins. `$[Department = "Eng", Date.Month = "2026-03"]` pins one cell at
 exactly that grain and stops when the grain changes. The constraints choose
-items; the sigil chooses reach. Use the subset for a named-dimension business
+items; the `$` prefix chooses reach. Use the subset for a named-dimension business
 rule and the exact form for a place that must remain pinned.
 
 **The regime trap.** A rule whose condition carries a non-literal
@@ -106,11 +101,11 @@ non-literal Date term pulls it in. A layer-3 rule meant to shape the
 forecast pairs its `segments` with `period`, which pins the base Date
 grain and carries the window in one move (`grain` and `period` cannot be
 combined; a period already pins the Date grain). Its reach across other
-dimensions still comes from the stored condition's sigil.
+dimensions still comes from the stored condition's `$` prefix.
 
-## 9.3 Author at the broadest layer that carries the rule
+## 9.3 Write at the broadest valid layer
 
-Business statements name their own layer. Listen for it:
+The business statement identifies its layer:
 
 - "Revenue is price times quantity" is the variable's meaning: layer 1.
 - "Forecast grows 5% a month" is a regime: layer 2.
@@ -128,7 +123,7 @@ drills or re-slices. When you inherit one of those, consolidating the pile
 upward into one rule at the right layer is usually the most valuable edit
 available.
 
-## 9.4 The grain check, before any write
+## 9.4 Check grains before writing
 
 Before writing formulas for a table, list the grains the table will
 actually evaluate. The grains are crossings: a cell's grain is one row
@@ -166,7 +161,7 @@ the same chain rule to every grain. {Date.Quarter} rolls up, so pick the verb a
 balance needs (the closing month, not a sum) per references/04-time.md §4.4;
 §9.2's layer-2 note carries the rollup write and its warning contract.
 
-## 9.5 A parent cell has two jobs
+## 9.5 Parent cells answer two questions
 
 Every parent cell answers two separate questions, and keeping them
 separate is most of debugging:
@@ -186,7 +181,7 @@ Ratio parent that is not the sum of its children: nothing failed, that is
 recompute working as designed; say what the parent means instead of
 "fixing" it.
 
-## 9.6 Defaults must travel
+## 9.6 Defaults must work at every grain
 
 Layer 1's power has a price: the default evaluates at every grain,
 including grains with no Date and grains carrying dimensions you never
@@ -210,13 +205,13 @@ in a window, the grain-bound logic in grain rules.
 ## 9.7 The address you write is table-bounded
 
 You reason inside the table you are looking at. The engine has no such
-context: a condition names dimensions absolutely, then its sigil decides
+context: a condition names dimensions absolutely, then its `$` prefix decides
 whether it lands only there or also at richer grains (§9.1). The `block`
 parameter bridges the two, and only for `segments`: anchored to a block by
 name, `segments` completes your address against that block's segmentation,
 filling the dimensions you omitted as open slots.
 `segments: {"Country": "USA"}` with `block` naming a Country-by-State table
-persists at the grain the table actually computes, {Country, State}, as
+is saved at the grain the table actually computes, {Country, State}, as
 `$[Country = "USA", State in any]`. The echo's `written` is the full stored
 condition; `completed_from_block` names the terms the block injected. A
 hand-written `condition` is never completed — you own every term, Date

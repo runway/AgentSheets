@@ -1,11 +1,10 @@
-# Saving formulas: the full procedure
+# Save formulas
 
-The `build-model` body carries the rules that decide whether a write is correct. This file
-carries the mechanics: which phrasing maps to which item shape, what each response field
-means, and what to do when a verified cell comes back wrong. Read it when you are about to
-write formulas, or when a write landed somewhere you did not intend.
+The `build-model` skill explains correctness. This file explains how to shape a
+write, read its response, and fix a value written to the wrong place. Read it
+before writing formulas or repairing a misplaced formula.
 
-## Step 1: Pick the tool from the intent
+## Step 1: Map the request to a write
 
 | User phrasing                                               | Item                                                                                                    |
 | ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
@@ -19,8 +18,8 @@ write formulas, or when a write landed somewhere you did not intend.
 | "One rule at the region grain, future items included"       | `segments: {"Region": "*"}` — the open slot, a different address from leaving `Region` out              |
 | "For each region, including richer drill-ins ..."           | `condition: "[Region in any, Date.Month in any]"` beside its `period` — the condition carries Date      |
 
-Write every formula the current build phase needs in one `change.set_values` `items` array; a
-separate call per item spends a model step for nothing. Never send write calls in parallel. An
+Put every formula for one build phase in one `change.set_values` `items` array.
+Do not spend one call per item or run writes in parallel. An
 item also takes an optional `grain` (`month`, `quarter`, and so on) when its expression steps
 relative in time, such as a year-over-year ratio (`mrr / mrr[-12]`): pinning the grain keeps a
 coarser view from stepping by the wrong period. A `period` pins the grain itself, so the two are
@@ -33,7 +32,7 @@ the user which you chose. In a from-scratch build the block does not exist yet: 
 and its table first, then write the scoped values with that block. Only a wholly unbounded
 default is safe to write before its table exists.
 
-## Step 2: Write at the address
+## Step 2: Write to the right address
 
 Give `change.set_values` the target `block` and only the dimensions the user named. The tool completes
 the address against the block (anchoring) and reports what it filled in under
@@ -57,7 +56,7 @@ reach every level, but it also owns the collapsed parent, which binds no item: e
 there and the parent shows the leftover branch instead of the aggregate it would otherwise
 recompute ([[dimensional-modeling:references/10-deviations.md#D7]]).
 
-Write `condition` when coordinates cannot carry a term or when the sigil is part of the intent, and
+Write `condition` when coordinates cannot carry a term or when the `$` prefix is part of the intent, and
 give it every term including Date. Use `[…]` for a named shape that should survive richer grains and
 `$[…]` for a place that should stop when the grain changes. Nothing is completed for a condition,
 which is the point of choosing one. When pasting from a read, the field takes the bracketed half
@@ -87,10 +86,28 @@ for a large batch — valid items land and you resubmit only the rejects — and
 the items must apply together or not at all. When rival rules already sit at one address,
 `formula_id` on an item updates the one you name.
 
-## Step 3: Read the response, not just the status
+Both settings are call-scoped: they go at the top level of the call, beside `scenario` and
+`change`, never inside the block. `change` carries exactly one concern, so there is no finer
+scope for them to sit in — and putting them inside a block is refused rather than ignored.
 
-`applied: true` only says the write landed somewhere. Where it landed is the part worth checking,
-because a bound you did not mean to send is applied exactly as willingly as one you did. Every
+```json
+{"scenario": "Base", "mode": "atomic", "change": {"set_values": {"items": [ ... ]}}}
+```
+
+`edit_variables` `change.operations` honors `mode` — atomic runs the whole batch as one change,
+committing only if every operation succeeded, so a rejected one takes the earlier ones back out
+with it and the whole batch undoes by the single id it reports. Reach for it when the operations only make sense together, such as the
+variables a formula you are about to write depends on. It has no `dry_run`: nothing checks an
+operation without running it, and asking is refused rather than quietly ignored. Atomic is the
+closer substitute — it applies everything or nothing, so a bad operation costs you no cleanup.
+
+`edit_model_views` takes `dry_run` and has no `mode` — its table entries always apply
+independently. `edit_dimensions` takes neither, and its operations always apply independently.
+
+## Step 3: Read where the formula landed
+
+`applied: true` only says the write succeeded somewhere. Check where it landed.
+Every
 write answers in the readable grammar; the leading fields are one sentence each about where, and
 one about when:
 
@@ -108,11 +125,11 @@ one about when:
   for a rule with no open Date term, or `Actuals only, because a rule matching many dates with no
 period is scoped there`. It is the direct read-back for the silent-actuals trap — a projection
   whose regime echoes actuals-only governs no forecast month, whatever `applied` says.
-- **The sigil-downgrade trap.** An update matches across the sigil: `[terms]` and `$[terms]`
+- **The `$`-prefix trap.** An update matches `[terms]` and `$[terms]`
   naming the same terms are one signature (only `[]` and `$[]` never unify), and the update keeps
   the STORED spelling. So authoring `condition: "[X in any, Date.Month in any]"` over a legacy
   `$[…]` rule silently stores `$[…]`, gains no drill-in coverage, and still reports
-  `applied: true` — read `written`'s sigil, not just its terms.
+  `applied: true` — check the `$` in `written`, not just its terms.
 - `uncovered_block_grains` lists grains the named block evaluates that no exact, subset, or default
   formula covers. One subset rule may cover several richer grains, so treat each entry as a coverage
   gap rather than instructions to copy the same formula per grain. Date-typed breakdowns (a cohort
@@ -127,7 +144,7 @@ window called something else entirely. `created: false` means a rule already at 
 updated rather than a second one added. A rejection names what owns the
 intent you expressed; follow the pointer instead of retyping the same input.
 
-## Step 4: Verify calculated state before a dependent build or a reported result
+## Step 4: Verify values before using or reporting them
 
 A valid write proves the formula was accepted, not that it computes the intended values. Verify
 before anything downstream depends on them and before you report a number or call the build done —

@@ -5,17 +5,16 @@ shared/grammar-reference-overlay.json. Every example below is parsed by
 scripts/verify_grammar_reference.py before this file is written.
 -->
 
-# Readable formula reference
+# Formula syntax reference
 
-The inventory of spellings the parser accepts; normative for syntax. Meaning
-and choice live in `formula-grammar.md` beside it.
+This is the syntax accepted by the parser. For meaning and guidance, read
+`formula-grammar.md` beside this file.
 
 ## Formula shapes
 
-Every authored string parses at one of these entry points. Match the shape to the
-field you are filling.
+Each formula string uses one of these entry points. Match it to the field you are filling.
 
-| Shape | Authored in | Example |
+| Shape | Written in | Example |
 | --- | --- | --- |
 | Expression | formula bodies: variable formulas, defaults, rollups | `Revenue - COGS` |
 | Condition | the condition half of a formula write | `[]` |
@@ -81,9 +80,9 @@ Values written directly into a formula.
 
 ## Operators
 
-Author the canonical spelling. Accepted spellings still parse in stored formulas.
+Use the preferred spelling. Accepted spellings still parse in stored formulas.
 
-| Group | Canonical | Accepted, do not author |
+| Group | Preferred | Accepted, do not write |
 | --- | --- | --- |
 | Arithmetic | `+` `-` `*` `/` `%` `^` | `**` |
 | Comparison | `=` `<>` `<` `<=` `>` `>=` | `==` `!=` |
@@ -165,7 +164,7 @@ consequences that are easy to read past.
 
 - Function arguments are full expressions, so lookups, nested calls, and bare `and`/`or` are all legal inside `f( … )`.
 - A condition is one bracketed group. `[]` is the whole-model default and matches every segmentation. `[Dim in any]` claims a shape: it matches any segmentation containing the named dimensions and survives added drill-ins. `$[...]` claims a place: it matches exactly the named set, so use it for cell pins and pasted-back read addresses that must stop applying when the grain changes. `$[]` matches only the empty segmentation. A condition never appears inside an expression.
-- **Bracket fallthrough.** A bracket that matches no predicate shape still parses, as a date offset. `Revenue[Flag = (Active and Open)]` is a predicate lookup, while `Revenue[Flag = Active and Open]` parses as an offset expression instead. A clean parse is not proof the bracket means what you intended, so confirm against the dry run's canonical echo.
+- **Bracket fallthrough.** A bracket that matches no predicate shape still parses as a date offset. `Revenue[Flag = (Active and Open)]` is a predicate lookup, while `Revenue[Flag = Active and Open]` becomes an offset expression. A clean parse does not prove the bracket means what you intended. Check the dry run's normalized output.
 - A cell address is a variable followed by one condition, which is why a read echoes `Variable[condition] = expression` and why pasting that condition back into a write updates that rule rather than adding one. The condition carries its own brackets; a second bracket group is a parse error, not a second term group.
 - **Dimension items.** `$[Location = "East Coast"].Location` is a dimension-item literal: it pins one dimension to a string and looks that dimension back up, evaluating to the pinned value. Prefer this notation over a bare string whenever it could be ambiguous whether a dimension item is intended (comparisons like `this.Location = …`, values fed to filters); a bare `"East Coast"` is just text, while the literal names its dimension. Always write the `$` form: it evaluates the pinned segment absolutely, while omitting the `$` composes the pin with the current segment, so the result can depend on where the formula runs. Looking up a different property (`$[Location = "East Coast"].Revenue`) evaluates as that property's lookup at the pinned segment, like `Revenue$[Location = "East Coast"]`.
 - **Mapped dimensions read like values.** When a dimension's items come from a mapping (a lookup keyed by other dimensions), a lookup of it evaluates to its mapped item: `Bucket[Account = "5001"]` is that account's bucket. Dot access is the same read — `this.Bucket` is the current segment's mapped item when the segment carries the keys, and each dot hop desugars to a lookup keyed by the previous value, so `this.Account.Bucket` is `Bucket[Account = this.Account]`, and hops keep going where mappings chain. In a predicate the mapping runs the other way: `sum(Amount[Bucket = "COGS"])` gathers every source row whose account the mapping puts in COGS.
@@ -176,21 +175,22 @@ consequences that are easy to read past.
 | `Revenue / sum(Revenue$[Region in any])` | share of total: absolute plus wildcard |
 | `(Revenue - Revenue[-1]) / Revenue[-1]` | date offsets in arithmetic |
 | `if(Tier in 1:3, 1, 0)` | range membership |
+| `average(Revenue[Date.Month in [-3]:[-1]])` | trailing window: relative date range + aggregate |
 | `sum(Revenue[Date.Month where Date.Month <= this.Date.Month])` | where predicate with a current segment chain |
 | `` if(this.Date.Month = date(2026, 1, 1), 250000 + `Net Cash Flow`, `Cash Balance`[-1] + `Net Cash Flow`) `` | recurrence: date-pin branch, offsets, backticks |
 
 ## Functions
 
-Author the canonical name. Accepted names still parse in stored formulas.
+Use the preferred name. Accepted aliases still parse in stored formulas.
 
 ### Aggregation
 
-- `sum(value: number, value2...: number) -> number`: Returns the sum of one or more numeric expressions across the selected values.
-- `product(value: number, value2...: number) -> number`: Returns the product of one or more numeric expressions across the selected values.
-- `min(value: number, value2...: number) -> number | null`: Returns the smallest value across one or more numeric expressions, or null when no values exist.
-- `max(value: number, value2...: number) -> number | null`: Returns the largest value across one or more numeric expressions, or null when no values exist.
+- `sum(value: number, value2...: number) -> number`: Adds one or more numeric expressions across the selected values.
+- `product(value: number, value2...: number) -> number`: Multiplies one or more numeric expressions across the selected values.
+- `min(value: number, value2...: number) -> number | null`: Finds the smallest value across one or more numeric expressions. Returns null when no values exist.
+- `max(value: number, value2...: number) -> number | null`: Finds the largest value across one or more numeric expressions. Returns null when no values exist.
 - `average(value: number, value2...: number) -> number | null`: Returns the arithmetic mean of one or more numeric expressions across the selected values, or null when no values exist. *(accepted: `avg`)*
-- `count(value: any, value2...: any) -> number`: Counts the non-empty values of one or more expressions, matching Excel COUNTA rather than Excel COUNT.
+- `count(value: any, value2...: any) -> number`: Counts non-empty values in one or more expressions. It works like Excel COUNTA, not Excel COUNT.
 - `first(value: T) -> T | null`: Returns the first value in an expression's ordered series, or null when the series is empty.
 - `last(value: T) -> T | null`: Returns the last value in an expression's ordered series, or null when the series is empty.
 - `stdev(value: number, value2...: number) -> number | null`: Returns sample standard deviation (ddof=1) pooled across one or more numeric expressions, or null with fewer than two values. *(accepted: `stddev`)*

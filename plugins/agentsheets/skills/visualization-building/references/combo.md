@@ -1,14 +1,14 @@
-# Combo Chart Guide
+# Combo chart
 
-## Chart options shape
+## Options
 
-Give each series its own `type` — this is what makes it a combo. Derive the
-yKeys from `ds.series` (dataset rows are keyed by generated series keys, NOT by
-variable names, so hardcoded keys like `yKey: "revenue"` render empty):
+Give each series its own `type`. Read y keys from `ds.series`; rows use generated
+series keys, not variable names. A hardcoded key such as `yKey: "revenue"`
+renders empty:
 
 ```jsx
 function Block({ data }) {
-  const ds = data.revenueVsMargin || { rows: [], series: [] }; // "revenueVsMargin" = the name YOU declared in datasets
+  const ds = data.revenueVsMargin || { rows: [], series: [] }; // Use the name declared in datasets.
   return (
     <Chart
       options={{
@@ -25,13 +25,13 @@ function Block({ data }) {
 }
 ```
 
-## Contract notes
+## Rules
 
-- The example assigns the first dataset variable or dimension to bars and later variables and dimensions to lines. Control
-  that mapping through variable or dimension order or by selecting on `s.label`.
+- The example uses a bar for the first variable or dimension and lines for the rest. Control this
+  with dataset order or `s.label`.
 - AG Charts `axes` with `keys` can place differently scaled series on separate axes.
 
 ## Common mistakes
 
-- Hardcoding variable-name yKeys instead of reading `ds.series[i].key`
-- Giving every series the same type (that's just a line or bar chart — defeats the purpose)
+- Hardcoding variable-name y keys instead of using `ds.series[i].key`.
+- Giving every series the same type. That is a plain line or bar chart.

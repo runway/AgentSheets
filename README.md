@@ -19,11 +19,11 @@ already has.
 ## Skills
 
 | Skill | When it applies |
-| --- | --- |
-| `build-model` | Operate the model-authoring surface for variables, dimensions, formulas, and supporting table context. Use when creating, evaluating, validating, or updating model logic. |
-| `dimensional-modeling` | The core reference for how modeling works — segments and grains, formula dispatch and recompute-vs-rollup laws, table-block axes and pivoting, validity rules, time and granularity, scenarios and comparisons, and the modeling workflow. Use when designing, restructuring, debugging, or explaining tables, formulas, or pivots; when numbers look wrong or cells are unexpectedly blank; or before any multi-step modeling build. |
-| `table-building` | Operate pages and saved table blocks for financial reports. Use when creating, validating, inspecting, or updating a report table. |
-| `visualization-building` | Operate pages, charts, and code visualizations for saved reports. Use when creating, validating, inspecting, or updating a chart or custom visualization. |
+| ----- | --------------- |
+| `build-model` | Create or change model variables, dimensions, formulas, and table context. Use when building model logic, checking a formula, or testing a change before saving it. |
+| `dimensional-modeling` | Explain how segments, grains, axes, formulas, rollups, tables, pivots, validity rules, time, scenarios, and comparisons work. Use when designing, changing, debugging, or explaining a model, especially rollup versus recompute behavior or granularity, when numbers look wrong or cells are blank, or before a multi-step model build. |
+| `table-building` | Create, check, review, or update pages and saved financial-report tables. Use when the user wants a saved table, not just an answer in chat. |
+| `visualization-building` | Create, check, review, or update pages, charts, and custom visuals. Use when the user wants a visual saved on a page, not just an answer in chat. |
 
 ## About this repository
 

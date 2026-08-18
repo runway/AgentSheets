@@ -1,12 +1,12 @@
-# Area Chart Guide
+# Area chart
 
-## Chart options shape
+## Options
 
 Single variable (rows carry `value`):
 
 ```jsx
 function Block({ data }) {
-  const ds = data.expenses || { rows: [], series: [] }; // "expenses" = the name YOU declared in datasets
+  const ds = data.expenses || { rows: [], series: [] }; // Use the name declared in datasets.
   return (
     <Chart
       options={{
@@ -18,8 +18,8 @@ function Block({ data }) {
 }
 ```
 
-For two variables, map the dataset's series instead — multi-variable rows are keyed
-by `series[i].key`, so a lone `yKey: "value"` series would render empty:
+For two variables, map the dataset's series. Multi-variable rows use
+`series[i].key`, so `yKey: "value"` would render empty:
 
 ```jsx
 series: ds.series.map((s) => ({
@@ -30,12 +30,11 @@ series: ds.series.map((s) => ({
 }));
 ```
 
-## Contract notes
+## Rules
 
-Use stacked area series when several inputs are meant to sum to one total. Plain multi-series area
-charts overlap rather than add.
+Use stacked areas when several inputs add to one total. Plain area series overlap.
 
 ## Common mistakes
 
-- Reading `value` from a multi-variable dataset (only single-variable rows carry it)
-- Omitting dateGranularity in the dataset settings for time-series data
+- Reading `value` from a multi-variable dataset. Only single-variable rows have it.
+- Omitting `dateGranularity` for time-series data.

@@ -1,11 +1,10 @@
-# Modeling from first principles
+# Why the model behaves this way
 
-Why the model behaves the way it does, built from the spreadsheet you already
-know. Read this when a symptom makes no sense, before re-verifying a correct
-build: most "wrong numbers" are one of the laws below, and re-running the write
-will not change them.
+This file explains the model by comparing it with a spreadsheet. Read it when a
+result seems wrong before repeating a correct write. Repeating the write will
+not change these rules.
 
-## The spreadsheet you know, and what it hides
+## Spreadsheets store position, not meaning
 
 A revenue model in a spreadsheet: countries and segments nested down the side,
 months across the top. You read a highlighted cell instantly as "USA Enterprise
@@ -14,16 +13,15 @@ for the cell is row 3, column 6. The country, the segment, the month, even the
 fact that it is revenue, live in other cells as display text; the connection
 exists only in the reader's head. Position creates meaning.
 
-Count what locates that 1,240: which metric, which country, which segment, which
-month, which scenario. Five questions. A grid answers two, a sheet tab adds a
-third, and everything else gets braided into the row axis as nesting. That braid
-is why inserting a country rebuilds the layout, why "what was USA Enterprise
+The value 1,240 needs five coordinates: metric, country, segment, month, and
+scenario. A grid answers two, a sheet tab adds one, and the rest are nested in
+rows. This is why inserting a country rebuilds the layout, why "what was USA Enterprise
 revenue in May" has no machine-answerable form against a sheet, and why three
 scenario tabs mean three copies of every formula.
 
-## Here, a number lives at named coordinates
+## Model values use named coordinates
 
-This system refuses to flatten. It stores **variables** (Revenue, Payroll,
+The model stores **variables** (Revenue, Payroll,
 Headcount), **dimensions** (Department, Region; the ways a variable slices), and
 **dimension items** (Engineering, Sales are items of Department). A value does
 not live in a box; it lives at an address:
@@ -36,20 +34,19 @@ Three consequences, each the reversal of a spreadsheet fact:
 
 - **Order carries nothing.** `$[Department = "Eng", Region = "SF"]` and
   `$[Region = "SF", Department = "Eng"]` are the same set of coordinates, so the
-  same cell. In a grid, order was the entire address.
+  same cell. In a spreadsheet, order is the address.
 - **Each variable has exactly the axes it needs.** Revenue by Country and
   Segment; Headcount by Department alone; a tax-rate assumption by nothing.
-- **Tables are lenses, not the data.** A table picks dimensions to fan down the
-  rows and runs Date across the columns. Two tables slicing the same coordinates
-  always show the same numbers (the pivot law). Drilling a row open reveals
-  coordinates that were always there; deleting a table deletes a lens, never a
-  number. And a value no table shows still has a full, stable name.
+- **Tables are views, not stored data.** A table puts dimensions on rows and
+  Date on columns. Two tables using the same coordinates show the same numbers
+  (the pivot law). Drilling reveals existing coordinates. Deleting a table does
+  not delete values.
 
 Scenarios are a coordinate too. What a spreadsheet fakes with copied tabs is one
 model here with a scenario axis, so a formula fix lands in every scenario at
 once.
 
-## Formulas are rules over regions, not cell contents
+## Formulas are rules for coordinate sets
 
 In a spreadsheet, "payroll grows 2% a month" is one formula pasted into 72 cells,
 each copy free to drift. Here it is one rule at a partial address:
@@ -78,7 +75,7 @@ else:
   Support goes blank the day the data grows a Facilities department. The default
   needs no edit: it matches whatever exists at calculation time. So build models
   as one default plus scoped exceptions, never as one rule per segment. A
-  per-segment model silently rots as data grows.
+  per-segment model silently becomes incomplete as data grows.
 - **It is where parent-row math comes from.** In a Spend table, the bold parent
   row shows 89,000 above Eng 40,000, Sales 30,000, Support 10,000, Facilities
   9,000. Why a sum? Every variable carries an aggregation function, and the
@@ -87,7 +84,7 @@ else:
   "do not aggregate," which blanks the parent row. Leaf cells right but parents
   blank almost always traces here.
 
-## Time is the one dimension you can step along
+## Time supports previous and next periods
 
 Department has members, not an order; there is no "the department after Eng."
 Time has a next and a previous, uniform steps, and coarser grains that nest
@@ -124,12 +121,11 @@ Two facts about time and data that save hours:
   true row statistics (average, median, count), because `average(Revenue)` on
   the named metric averages one already-summed number.
 
-## The two walls, and what the tools do about them
+## Two common failure cases
 
-Knowing what cannot work deletes the failure spiral — rebuild, re-read, still
-empty, rebuild again — that otherwise runs to timeout. The two walls to know:
+Check these two cases before rebuilding or rereading the same result:
 
-**The grain-locked formula (the "dead formula").** A `$[…]` rule fires only where its dimension set
+**Grain-locked formula.** A `$[…]` rule runs only where its dimension set
 exactly equals the cell's. On a table sliced by Department and Region, an exact
 formula naming only `Department = "Eng"` stores fine, validates fine, and fills
 nothing. No error anywhere. Use `[…]` instead when the rule should follow every
@@ -143,7 +139,7 @@ deliberate grain claim; the unsigiled shape is authorable only through
 at different shapes, or a date the tool will not guess), it refuses with
 directions instead of writing something plausible and wrong.
 
-**The confident zero.** A variable with no default shows real history up to the
+**Default zero.** A variable with no default shows real history up to the
 org's last-close date and exactly 0 after it. That zero is the engine's
 deliberate stand-in ("no forecast logic exists yet"), not a data bug. The fix is
 writing forecast logic, not hunting the data. The stand-in also passes source
@@ -152,7 +148,7 @@ That is why a placeholder default of `0` is the worst formula in the system: it
 zeros the forecast, suppresses the history passthrough, and blanks parent rows,
 all at once.
 
-## Saying what you mean: bounds first, spelling when it carries intent
+## State the intended scope
 
 Name the intent with `segments` and the tool stores the completed coordinates
 as an exact `$[…]` — every bounds write claims exactly the grain it names.
@@ -194,7 +190,7 @@ the response, not just the status").
 After writing, read your work back: `inspect_model_views` takes a view, so
 you can look at exactly the slice you just wrote and check the numbers.
 
-## The repair table
+## Troubleshooting table
 
 Symptom first, because that is the direction troubleshooting runs:
 

@@ -1,15 +1,13 @@
 # Known limitations
 
-Things that do not work right now. Each entry says what you'll see, what
-not to do, and what to do instead. Entries marked **temporary** get deleted
-when the platform fix ships — while an entry is here, treat it as true.
-Entries marked **permanent** describe how the system is designed, not a bug.
+Each entry gives a current limitation, its symptom, and the safe response.
+Remove **temporary** items after the platform fix ships. **Permanent** items
+describe intended behavior.
 
-**The running-balance recipe.** Several entries below are ways one job goes
-wrong: a value that builds on its own previous value (cash, customers, any
-balance). The shape that works, at every time scale, is three plain pieces:
+**Running balances.** Several limits affect values that use their own prior
+period, such as cash or customer balances. Use three parts:
 
-1. **Seed** — one starting cell, on the **first month** of the table's
+1. **Seed** — one starting cell on the **first month** of the table's
    date window: `` `X`$[Date.Month = "2026-01"] = 100000 ``. (`set_values` with a
    `condition` writes this form. If you write the condition by hand, use the
    string form `"2026-01"` — a `date(2026, 1, 1)` condition never matches.)
@@ -17,7 +15,7 @@ balance). The shape that works, at every time scale, is three plain pieces:
    the chain's own grain. A seed at a finer or coarser grain than the chain
    silently never fires. Never seed a coarser grain to fix its view; that
    is the anchor's job.
-2. **Chain** — a plain prior-period read, with no guard around it. For one
+2. **Chain** — a plain prior-period read with no guard. For one
    chain on the unsegmented time row, write
    `` `X`$[Date.Month in any] = X[-1] + `Change` ``, one item per regime the
    window spans: a non-literal Date term (`in any`) with no `period` governs
@@ -130,8 +128,8 @@ with one lone Date term, so the windowed formula applies only at the {Date}
 grain — the variable's own row over time. Any grain that adds a dimension
 (the same variable drilled by Department, Product, anything) is not covered
 by it, and those cells fall to the generated regime fallbacks: raw source
-sums in actuals, 0 in forecast. Exactness is the `$` sigil's property — an
-unsigiled `[…]` condition matches by subset containment — but every
+sums in actuals, 0 in forecast. The `$` prefix makes a condition exact;
+without `$`, a `[…]` condition matches any grain that contains its terms. Every
 bounds-composed write stores `$`.
 
 - What you'll see: the variable's top row correct across time, while every
@@ -166,11 +164,13 @@ Nearly every source feeds the Date axis, so the usual shape is this: every read
 with a date breakdown fails, the same read without one works, and every formula
 in the workspace is correct.
 
-- What you'll see: `calculation service returned 500: 'external column <name>
-is not mapped in table <id>'`, on every read carrying the affected
-  breakdown — even a brand-new block built from variables you just created.
-  The `<id>` is an internal source-table id that no tool resolves. The error
-  read-back itself suggests the no-breakdown check below.
+- What you'll see: the read is refused rather than failing, carrying
+  `error_kind: "blocked"`. It says it binds a source column an imported table
+  no longer provides, and quotes the calculation service:
+  `external column <name> is not mapped in table <id>`. Every read carrying the
+  affected breakdown gets it, even a brand-new block built from variables you
+  just created. The `<id>` is an internal source-table id that no tool
+  resolves, and the refusal's own hint names the no-breakdown check below.
 - Don't: rewrite your formulas, set `preferred_time_property`, or widen the
   workspace time defaults. The broken entry belongs to an imported source that
   no tool here can repair, so none of those can help.

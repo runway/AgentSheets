@@ -1,18 +1,14 @@
-# Variable recipes: from the ask to the construction
+# Variable recipes
 
-Constructions for new variables, indexed by the words in the user's request.
-Builds on the collapse-order law (references/02-formulas.md §2.3: a variable
-reference collapses to one rolled-up number before any aggregate sees it)
-and the pattern gallery (§2.9). Use this file so the FIRST write is the
-right shape. Answering a non-additive ask ("average deal size") by trial
-and error burns minutes of engine round-trips. Matched to its recipe, it is
-one variable write and one formula write.
+Use these recipes to build new variables from common requests. They rely on
+the rule that a plain variable reference becomes one rolled-up number before
+an aggregate sees it (references/02-formulas.md §2.3). Choose the recipe before
+the first write to avoid trial and error.
 
 ## 13.1 The decision rule
 
 Aggregation answers one question: **what is this variable's value for an
-interval, given its values for the interval's parts?** Ask it the way a
-CFO would ("this variable, for Q1"). The honest answer names the setting:
+interval, given its values for smaller periods?** The answer chooses a setting:
 add the months (SUM); quote the closing month (LAST) or the opening month
 (FIRST); quote the extreme (MAX/MIN); tally or test presence (COUNT/ANY);
 average the months (AVERAGE, a per-grain override only — see fact 2
@@ -38,7 +34,7 @@ the ingredients.
 - A **derived rate** ("margin %", "revenue per rep", "share of total",
   "growth") is a ratio of variables, DO_NOT_AGGREGATE, recomputed per grain.
 
-Four facts every recipe below stands on:
+Four rules support every recipe:
 
 1. A source-column reference (`<runway:exttables/…/columns/amount/>`) is a
    real row aggregation: the engine aggregates the actual source rows inside
@@ -77,7 +73,7 @@ Four facts every recipe below stands on:
    re-evaluates the formula at the coarser grain, and a recurrence cannot
    survive that, because no prior period exists there.
 
-## 13.2 Recipes, indexed by the ask
+## 13.2 Recipes by request
 
 **"average deal size" / "average order value" / "avg X"** —
 `edit_variables` create, aggregation_function DO_NOT_AGGREGATE; then
@@ -146,7 +142,7 @@ needed. Law 2 does not apply: a LAST parent equals one child, by design.
 **"MoM/QoQ/YoY growth"** — two different asks; pick by the sentence.
 "Show the change versus last quarter" on an existing table is an
 `edit_table_blocks` comparison, not a variable (references/12-editing-blocks.md §12.4). A
-persisted growth METRIC is `(Revenue - Revenue[-1]) / Revenue[-1]`,
+saved growth METRIC is `(Revenue - Revenue[-1]) / Revenue[-1]`,
 guarded, DO_NOT_AGGREGATE. `[-1]` counts in the viewing grain; that is
 what makes one formula MoM on monthly views and QoQ on quarterly. This is
 an offset LOOKUP, not a chain (references/02-formulas.md §2.5): it reads
@@ -262,7 +258,7 @@ in the slice. A distinct count over values that are **not** a dimension
 cannot be expressed; there is no distinct(). Say so instead of
 approximating silently.
 
-## 13.3 Eyeball the readback
+## 13.3 Check the readback
 
 After any variable write, check the readback (references/07-modeling-method.md
 Step 7) against the aggregation's shape. Each law takes one glance:

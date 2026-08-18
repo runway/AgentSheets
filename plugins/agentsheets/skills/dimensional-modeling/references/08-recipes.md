@@ -1,30 +1,19 @@
 # Recipes
 
-Worked table shapes. Each recipe is a sentence — variables by dimensions
-over dimensions, plus knobs — and the laws it exercises. Write the
-sentence as a view (references/11-block-grammar.md): variables with
-breakdowns, id-free. The config-JSON rendering
-(references/03-table-blocks.md §3.9) is the escape hatch for what a view
-cannot spell — per-item overrides, multi-entry axes, UI-authored
-drill-ins — and its field mechanics live on the tool schema, not here.
-Recipes are starting points, not the space of valid tables. When a
-request fits no recipe, compose a new shape from the laws instead of
-forcing it.
+These are common table shapes. Each recipe describes variables by dimensions,
+plus settings. Write it as an ID-free view (references/11-block-grammar.md).
+Agents cannot write structures a view cannot express, such as per-item
+overrides, multi-entry axes, or UI drill-ins (§11.5). Say so and stop.
+If no recipe fits, build a new valid shape from the rules.
 
-## The rule (memorize once)
+## Core rule
 
-An axis is one rule, and a view spells it as a breakdown term: which
+An axis is one rule. A view writes it as a breakdown term: which
 dimension, the branch it sits under, the items it keeps, the time grain it
 buckets (`.Month`), what descends beneath it. Sort is presentation
 (`edit_table_blocks` `change.sort`); a dimension can sit on the value axis
 as a mapping (`{"dimension": "City"}`, references/11-block-grammar.md
-§11.1), and any other role override exists only in `table_config`.
-
-Building or reshaping a table is id-free: you never call
-`generate_uuids`, because a view carries no node ids and the write mints
-and reconciles every one. Node ids surface only in `table_config` — the
-tool schema carries their mechanics, and `inspect_table_blocks`
-`ask.config` hands back a block's own ids to thread on a raw-config edit.
+§11.1). Any other role override is UI-authored and not agent-writable.
 
 ## R1 — A variable over time
 
@@ -157,10 +146,13 @@ Add the value to the dimension with `edit_dimensions`
 `change: {add_items: {dimension: "Department", values: ["Platform"]}}`; it is
 model-wide (references/01-the-dimensional-universe.md §1.4).
 Formulas pinned to it (`Department = "Platform"` conditions) then supply
-planned values, and the item appears in tables like any other. For date
-ranges (plan the next 24 months), set the axis's item generation to
-GENERATE over a date range instead. The added value is listed back under
-`manual_items`; generated date items are not enumerated at all
+planned values, and the item appears in tables like any other. Dates are the
+exception: a time axis generates its own members from the timeline, so
+`add_items` on it is refused. Plan the next 24 months by widening the span —
+the block's own window (references/12-editing-blocks.md §12.3) or the
+workspace `time_defaults` (references/04-time.md). The added value reads back
+in the item list tagged `origin: "manual"`; generated date items are not
+enumerated at all
 (references/07-modeling-method.md).
 
 ## R11 — The Actuals/Forecast pair, weekly
@@ -224,23 +216,22 @@ to the other period; it does not grow month columns. Anything
 aggregated — a department total, payroll over the year — is a report
 (R2, R12), built beside the listing rather than into it.
 
-## Not a table: the ephemeral probe
+## Not a table: an unsaved calculation
 
 For step-4 probes and one-off analysis, skip layout entirely: a probe is
 a bounds question, not a table. `inspect_variables` `ask.try_formulas`
 (references/02-formulas.md §2.8) takes named formulas, a period window,
-and the dimensions that get their own number:
+and at most one dimension that gets its own number:
 
 ```
-ephemeral_variables: [{ name = "margin", expression = "(Revenue - `Cost of Revenue`) / Revenue" }]
+expressions: [{ name = "margin", expression = "(Revenue - `Cost of Revenue`) / Revenue" }]
 from:     2026-01-01
 to:       2026-12-31
-by:       ["Region", "Date.Month"]
+rows_by:  "Region"
 max_rows: 200
 ```
 
-`from` and `to` are both required — a date dimension generates no members
-without a range. `Date.<grain>` in `by` sets the reported grain; `by` never
-substitutes for the range. Expressions reference saved variables by
-plain name and each other as `@name`. Results come back as `ephemeral_variable`
-and resolved `segments` per row; no address parsing needed.
+Periods are always the columns, at the model's base grain; `from`/`to`
+choose them. Expressions reference saved variables by plain name and each
+other as `@name`. Results come back as `ephemeral_variable` and resolved
+`segments` per record; no address parsing needed.

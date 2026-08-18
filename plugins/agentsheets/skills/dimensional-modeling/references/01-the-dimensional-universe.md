@@ -1,12 +1,10 @@
-# The dimensional universe
+# Dimensional model basics
 
-What the space is, what lives in it, and where it comes from. Builds on the
-axioms in SKILL.md.
+This file defines the model's core parts and where they come from. It builds on `SKILL.md`.
 
 ## 1.1 The space
 
-A segment is one point in the coordinate system, written as a set of
-dimension = item pairs:
+A segment is one point in the model, written as dimension-item pairs:
 
 ```
 {Department: Engineering}                          a coarse segment
@@ -15,10 +13,9 @@ dimension = item pairs:
 {}                                                 the empty segment = the total
 ```
 
-The **grain** of a computation is the set of dimensions in play. Asking for
-Revenue at grain {Region} produces one value per region. Asking at grain
-{Region, Month} produces one per region per month. The empty grain produces
-the single total. Two properties of grains matter constantly:
+The **grain** is the set of dimensions being calculated. Revenue at `{Region}`
+gives one value per region. Revenue at `{Region, Month}` gives one per region
+per month. The empty grain gives one total. Two rules matter:
 
 - Grains are sets, not lists. {Region, Month} and {Month, Region} are the
   same grain. Row/column placement is presentation, not meaning.
@@ -30,9 +27,8 @@ the single total. Two properties of grains matter constantly:
 
 ## 1.2 The dictionary: variables and dimensions
 
-Every entry in the workspace's data dictionary is a **variable** or a
-**dimension** (internally a "property" — you may see `property_id` in
-output). Three kinds:
+Every data-dictionary entry is a **variable** or **dimension**. Internally,
+both are properties, so output may use `property_id`. There are three kinds:
 
 - **Variable**: a quantity to compute. Usually FLOAT. Carries display metadata (format such
   as currency or percentage, decimal places) and an **aggregation function**
@@ -45,9 +41,9 @@ output). Three kinds:
 - **Date ref** (formula-range reference): a named date the model can compute
   with, most importantly "Last close" (references/04-time.md).
 
-A variable and a dimension are pure metadata. Neither stores values. Values
-come from source data or from formula evaluation. That separation lets scenarios
-fork the whole model without copying any data (references/05-scenarios-and-comparisons.md).
+Variables and dimensions are metadata; they do not store values. Values come
+from source data or formulas. Scenarios can therefore branch without copying
+data (references/05-scenarios-and-comparisons.md).
 
 Kind is immutable after creation. An entry's _role in one table_ can be
 overridden in one direction only. A dimension can sit on the value axis as a
@@ -60,25 +56,25 @@ discrete items to group by.
 
 ## 1.3 Where entries come from
 
-Entries are created three ways. The paths explain what you find in a
-workspace:
+Entries come from three places:
 
-1. **Created deliberately**, by a user or by ARI, with a name, kind, data
-   type, format. Names of user-created entries are not unique: two variables
+1. **Created by a user or Ari**, with a name, kind, data type, and format.
+   Names are not unique: two variables
    called "Revenue" can coexist. That is why formula text supports
    disambiguators (references/02-formulas.md).
-2. **Synced from source data.** When an integration query lands (accounting,
+2. **Synced from source data.** When an integration query loads (accounting,
    HRIS, CRM, warehouse), every column of the resulting external table becomes
    an entry automatically. Numeric columns whose names do not end in "id"
    (case-insensitive suffix — `Paid` counts) become variables; everything
    else becomes dimensions. The kind is immutable after sync (no re-kind
    operation exists), so a numeric code column that should group — an
    account number, a zip code — has exactly one lever: alias it in the
-   ingestion query's SQL so the name says what it is, then re-sync. Query
-   edits live on the ingestion agent, reached with `delegate_agent`
-   `change.ingestion`. These entries carry provenance (which query,
-   which integration). Identity is (name, source query), so re-syncs are
-   idempotent.
+   ingestion query's SQL so the name says what it is, then re-sync. Ari
+   cannot edit saved-query SQL, so name the exact alias change and hand it
+   to the user to apply to the query; once they have, reach the re-sync
+   through `delegate_agent` `change.ingestion`. These entries carry
+   provenance (which query, which integration). Identity is (name, source
+   query), so re-syncs are idempotent.
 3. **System bootstrap.** Every workspace gets the system **Date**
    dimension, the **Last close** date ref, and the **Actuals**/**Forecast**
    formula ranges. System entries are universally readable, unrenamable,
@@ -88,8 +84,8 @@ workspace:
 
 ## 1.4 Dimension items
 
-A dimension's items are, by default, the distinct values present in its
-source data (the MATCH behavior). Three ways items exist beyond the data:
+By default, a dimension's items are the distinct source values (MATCH). Items
+can also come from three places:
 
 - **The empty item.** Rows whose dimension value is missing form a real,
   addressable boxed item with typed URI identity `empty:None`, rendered "None".
@@ -97,34 +93,32 @@ source data (the MATCH behavior). Three ways items exist beyond the data:
 - **Hand-added items**: values added by hand so a table or formula can address
   what has no data yet (a planned department, a future product). A value added
   to one dimension (`add_items`) is model-wide — it exists on every table that
-  slices that dimension — and is listed back under `manual_items`. Pinning an
-  intersection of several dimensions (`pin_coordinates`) is scoped to the one
-  table block that shows it, and is not an item of any single dimension, so it
-  is not listed among them.
+  slices that dimension — and reads back in the item list beside the source
+  spellings, tagged `origin: "manual"` (or `"source+manual"` once the source
+  starts carrying it too). Pinning an intersection of several dimensions
+  (`pin_coordinates`) is scoped to the one table block that shows it, and is
+  not an item of any single dimension, so it is not listed among them.
 - **Generated items** (the GENERATE behavior): an axis can be told to
   generate items over a configured range even where no data exists. Date
   axes do this implicitly across the table's date range. That is why
   forecast months exist as columns before any actuals land on them.
 
-A dimension's `items` line on `inspect_dimensions` shows a count plus a few
-sample spellings; to read every spelling of a large dimension, page it with
-`inspect_dimensions` passing `ask: {items: {dimension, after}}`.
+`inspect_dimensions` shows an item count and a few samples. To read all items,
+page with `ask: {items: {dimension, after}}`.
 
 An unfiltered listing also appends `item_overlaps` facts — which dimensions
 name the same things, bounded by `more_pairs_not_shown` and
 `near_matches_capped` — the read for "are these two axes the same axis".
 
-Check cardinality before fanning a dimension across a table. The `items`
-count IS that check; never page a dimension just to count it, and a
-50,000-item dimension belongs behind a filter, not fanned across columns
+Check item count before spreading a dimension across a table. Do not page just
+to count. Filter a 50,000-item dimension instead of spreading it across columns
 (references/07-modeling-method.md).
 
-## 1.5 Source data and the "everything is a formula" bridge
+## 1.5 How formulas reach source data
 
-Actual data lives in an OLAP store as external tables, one per ingestion
-query, with columns mapped to entries. Formulas reach raw columns one
-way only: an external-column reference, almost always wrapped in an
-aggregate. The bridge law:
+Source data lives in external OLAP tables, one per ingestion query. Their
+columns map to entries. Formulas read raw columns through external-column
+references, usually inside an aggregate. The rule is:
 
 > A variable with no authored formula evaluates as the sum of its source
 > column at the requested grain; a source-backed dimension evaluates as its
@@ -141,14 +135,9 @@ configs only.
 
 ## 1.6 What "the model" is
 
-There is no schema file and no separate modeling layer. The model is, per
-scenario: the data dictionary, the formulas, the source tables, and the
-pages of blocks that present them. Tables are both the presentation and the
-place where modeling decisions (which variables, which breakdowns, which
-formulas) become visible and editable.
+There is no separate schema file or modeling layer. In each scenario, the
+model is its data dictionary, formulas, source tables, pages, and blocks.
+Tables show and edit choices such as variables, breakdowns, and formulas.
 
-To understand a workspace's model: read its dictionary (which variables and
-dimensions exist, and from which source), then survey its blocks (the block
-dictionary: which grains people actually look at), then read formulas for
-the load-bearing variables. That order becomes a procedure in
-references/07-modeling-method.md — one read each for the first two.
+To understand a model, read the dictionary, survey the blocks, then inspect
+formulas for key variables. See references/07-modeling-method.md.

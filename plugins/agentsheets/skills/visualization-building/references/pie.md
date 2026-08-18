@@ -1,15 +1,13 @@
-# Pie Chart Guide
+# Pie chart
 
-## Chart options shape
+## Options
 
-A pie shows one point in time. Prefer a dataset that resolves to a single row
-(narrow dateRange in `table_config.settings`); if the dataset still carries
-multiple periods, take the LATEST row — silently charting the first row shows
-stale composition:
+A pie shows one point in time. Prefer a narrow `window` that returns one row.
+If several periods remain, use the latest row. The first row may be stale:
 
 ```jsx
 function Block({ data }) {
-  const ds = data.segmented || { rows: [], series: [] }; // "segmented" = the name YOU declared in datasets
+  const ds = data.segmented || { rows: [], series: [] }; // Use the name declared in datasets.
   const row = ds.rows[ds.rows.length - 1] || {};
   const slices = ds.series.map((s) => ({
     label: s.label,
@@ -28,4 +26,4 @@ function Block({ data }) {
 
 ## Common mistakes
 
-- Feeding a full time series into a pie (pick one snapshot — usually the latest)
+- Passing a full time series. Pick one snapshot, usually the latest.

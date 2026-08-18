@@ -1,10 +1,10 @@
-# Stacked Area Chart Guide
+# Stacked area chart
 
-## Chart options shape
+## Options
 
 ```jsx
 function Block({ data }) {
-  const ds = data.revenueByChannel || { rows: [], series: [] }; // "revenueByChannel" = the name YOU declared in datasets
+  const ds = data.revenueByChannel || { rows: [], series: [] }; // Use the name declared in datasets.
   return (
     <Chart
       options={{
@@ -22,12 +22,11 @@ function Block({ data }) {
 }
 ```
 
-## Contract notes
+## Rules
 
-The upper edge of the stack is the total across all series for each period; each filled band is one
-series' contribution.
+The stack's upper edge is the period total. Each band is one series' share.
 
 ## Common mistakes
 
-- Omitting dateGranularity in the dataset (stacked areas need a time axis)
-- Using only one variable leaves no visible composition in the stack
+- Omitting `dateGranularity`. Stacked areas need a time axis.
+- Using one variable. A stack needs at least two.

@@ -1,18 +1,17 @@
-# Scenarios and comparing worlds
+# Scenarios and comparisons
 
-This reference covers scenarios (branches of the whole model), snapshots,
-and how blocks compare across them. Builds on the axioms in SKILL.md.
+This file covers scenarios, snapshots, and comparisons. It builds on `SKILL.md`.
 
 ## 5.1 Scenarios are auto-rebasing branches
 
-Internally a scenario is a _layer_. Every model entity (entry, formula,
+Internally, a scenario is a layer. Every model entity (entry, formula,
 block, page, setting) is resolved through the chain of layers from the
 scenario up to Main. The resolution law:
 
 > The closest scenario in the chain that has **any** version of an entity
 > wins outright. A deletion wins the same way a version does.
 
-Everything else follows from that one law:
+This means:
 
 - **Scenarios auto-rebase.** Edits on Main flow into scenarios continuously,
   _except_ the specific fields a scenario changed, which it keeps. Change a
@@ -30,18 +29,15 @@ Everything else follows from that one law:
   scenario can change formulas and configs. It never holds a private copy
   of the data.
 
-**Main** is the live official model, the default target of every read and
-write, and the one scenario that cannot be deleted or merged away. Speak of
-it as "Main" or "Main Scenario"; call the others by their names, never by
-layer ids.
+**Main** is the live model and the default for reads and writes. It cannot be
+deleted or merged away. Call it “Main” or “Main Scenario.” Call other scenarios
+by name, not layer ID.
 
 ## 5.2 Lifecycle
 
-Scenarios are created as children of Main. Do the work in the scenario.
-When it is ready, **merging applies the changes to Main and closes out the
-scenario**. Closed out means deleted: nothing remains to sync later.
-Scenarios that never land are simply deleted. Three rules an agent must
-honor:
+Scenarios are children of Main. Work in the scenario. **Merging applies its
+changes to Main and deletes the scenario.** Delete scenarios that will not be
+merged. Follow three rules:
 
 - Reading or comparing another scenario does not require switching into it.
 - A write targets a scenario through the tools' top-level `scenario`
@@ -63,13 +59,12 @@ Always call them snapshots to users, never "locked layers".
 
 ## 5.3b As-of reads
 
-Related but distinct: the inspect reads (`inspect_variables` including
+Inspect reads (`inspect_variables` including
 `ask.try_formulas`, `inspect_dimensions`, `inspect_model_views`,
 `inspect_table_blocks`, `inspect_scenarios`, `inspect_history`) take
-`as_of_point` — a `change_log_id`, a timestamp, a relative duration, or a
-calendar boundary — and answer from the model as it stood then, creating
-nothing. Reach for a snapshot when the frozen world must be durable and
-shareable (a comparison column, a board version), not merely readable.
+`as_of_point`: a `change_log_id`, timestamp, relative duration, or calendar
+boundary. They read past state without creating anything. Use a snapshot only
+when that state must stay durable and shareable, such as a board version.
 
 ## 5.4 Scenario comparison on a block
 
@@ -79,7 +74,7 @@ presentation: set it with `edit_table_blocks`, naming scenarios
 block at all; use `inspect_model_views` `ask.calculate` with compare_scenarios.
 Variance is comparison minus baseline.
 
-What you can rely on:
+Rules:
 
 - Each scenario is calculated independently, then aligned **by row identity,
   never by position**. A row that exists in one scenario and not another gets
@@ -99,16 +94,13 @@ What you can rely on:
   there, not a broken block. Keep the single comparison table and let those
   cells render empty; do not split the newer variable into a second table.
 
-When a request compares one thing against another, the first is the baseline
-and the second is the comparison. "Current revenue against the January board
+In “A against B,” A is the baseline and B is the comparison. “Current revenue against the January board
 plan" keeps the live plan as the baseline and adds the January snapshot to
 the comparison list. Do not build the block inside the snapshot or list the
-live scenario as a comparison: if the baseline lands on the frozen scenario,
-the plain column reads the old plan and every reader takes the frozen number
-for the live one. A table built the wrong way round still shows a variance
-of the right size with the two roles swapped, so the size of the number is
-no proof the sides are right. Before you trust the rest, confirm the plain
-column names the scenario you were asked to analyze.
+live scenario as a comparison. If the snapshot is the baseline, the plain
+column shows the old plan as if it were live. A reversed table still shows the
+same variance size with opposite roles. Check that the plain column names the
+requested baseline.
 
 Scenario comparison and time comparison are mutually exclusive on one block:
 setting one clears the other. When someone wants "budget vs actuals over
@@ -127,10 +119,10 @@ both scenarios' Last close before explaining a variance
 | you want                                                                      | use                                                                     |
 | ----------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
 | a coherent alternative plan touching many things, maybe landing on Main later | scenario                                                                |
-| an unsaved what-if on a formula, nothing persisted                            | `inspect_variables` `ask.try_formulas` (references/02-formulas.md §2.8) |
+| an unsaved what-if on a formula                                               | `inspect_variables` `ask.try_formulas` (references/02-formulas.md §2.8) |
 | this period vs a shifted period on one table                                  | time comparison (references/04-time.md §4.6)                            |
 | this world vs that world on one table                                         | scenario comparison                                                     |
 | a computed delta other formulas can reference                                 | a formula (references/02-formulas.md)                                   |
 
-Use a scenario for a durable alternative world. Use an `ask.try_formulas` probe
-for a temporary formula-level question that should not persist.
+Use a scenario for a durable alternative. Use `ask.try_formulas` for a temporary
+formula question.

@@ -1,12 +1,12 @@
-# 100% Stacked Bar Chart Guide
+# 100% stacked bar chart
 
-## Chart options shape
+## Options
 
 Add `normalizedTo: 100` to stacked bar series:
 
 ```jsx
 function Block({ data }) {
-  const ds = data.revenueMix || { rows: [], series: [] }; // "revenueMix" = the name YOU declared in datasets
+  const ds = data.revenueMix || { rows: [], series: [] }; // Use the name declared in datasets.
   return (
     <Chart
       options={{
@@ -25,11 +25,11 @@ function Block({ data }) {
 }
 ```
 
-## Contract notes
+## Rules
 
-Every bucket is normalized to 100%, so the chart preserves relative composition rather than
-absolute magnitude. At least two variables are needed for a meaningful normalized stack.
+Each bucket totals 100%, so the chart shows relative composition, not magnitude. Use at least two
+variables.
 
 ## Common mistakes
 
-- Using with only one variable (bar is always 100%, useless)
+- Using one variable. It will always show 100%.

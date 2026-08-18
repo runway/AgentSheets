@@ -1,13 +1,12 @@
-# Donut Chart Guide
+# Donut chart
 
-## Chart options shape
+## Options
 
-Same data shaping as the pie guide (latest row → one slice per variable), with a
-donut series:
+Shape data as for a pie: use the latest row and make one slice per variable.
 
 ```jsx
 function Block({ data }) {
-  const ds = data.segmented || { rows: [], series: [] }; // "segmented" = the name YOU declared in datasets
+  const ds = data.segmented || { rows: [], series: [] }; // Use the name declared in datasets.
   const row = ds.rows[ds.rows.length - 1] || {};
   const slices = ds.series.map((s) => ({
     label: s.label,
@@ -31,11 +30,10 @@ function Block({ data }) {
 }
 ```
 
-## Contract notes
+## Rules
 
-Donut charts use the same latest-row-to-slices shaping as pie charts. AG Charts also accepts
-`innerLabels` when the requested design includes a value or label in the center.
+AG Charts accepts `innerLabels` for a value or label in the center.
 
 ## Common mistakes
 
-- Feeding a full time series into it (pick one snapshot — see the pie guide)
+- Passing a full time series. Pick one snapshot; see the pie guide.

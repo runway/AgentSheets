@@ -1,7 +1,7 @@
-# Formulas: the calculus
+# Formula rules
 
-How every number is computed. Builds on the axioms in SKILL.md and the vocabulary of
-references/01-the-dimensional-universe.md (segment, grain, item).
+This file explains how the engine computes numbers. It builds on `SKILL.md` and
+references/01-the-dimensional-universe.md.
 
 ## 2.1 What a formula is
 
@@ -11,19 +11,15 @@ A formula is a triple attached to a target variable:
 (target property, condition, expression)
 ```
 
-plus an optional **formula range** (the formula only applies inside a time
-window, section 2.7).
+It may also have a **formula range**, which limits it to a time window (§2.7).
 
-The condition says where in the space the formula applies. The expression
-says what to compute there. Because they are separate, one variable can
-carry a general rule plus any number of targeted overrides without the
-rules fighting.
+The condition says where the formula applies. The expression says what to
+compute. A variable can therefore have one general rule and targeted overrides.
 
 ## 2.2 Conditions and dispatch
 
-**Dispatch** is how the engine picks, for every cell, the one formula that
-computes it: among the variable's formulas whose conditions match the cell,
-the most specific condition wins.
+**Dispatch** selects one formula for each cell. Among matching formulas, the
+most specific condition wins.
 
 A condition is one bracketed group. Its shape says which grains it claims:
 
@@ -40,9 +36,9 @@ A condition is one bracketed group. Its shape says which grains it claims:
    across every Region item.
 4. `$[]` names only the empty segmentation, not the whole model.
 
-Use `[…]` for a rule about named dimensions wherever they are broken out. Use
-`$[…]` for a deliberate grain-lock: a cell pin meant to stop when the shape
-changes, a condition pasted back from a read, or a structural mapping row.
+Use `[…]` for a rule that follows named dimensions into finer grains. Use
+`$[…]` to lock a rule to one exact grain: a pinned cell, a condition copied
+from a read, or a structural mapping row.
 Existing formulas may use the exact spelling; read them fluently and preserve
 the condition an edit addresses. The coordinate bounds (`segments`, `grain`,
 `period`) always compose an exact `$[…]` of the named coordinates; a subset
@@ -66,21 +62,17 @@ Which date axis a view descends is SKILL.md axiom 13; on a view whose sole
 date-typed dimension carries that descent, a rule that omits the dimension
 descends it the way a Date-less rule descends the timeline.
 
-**The dispatch order.** When the engine needs a value for (variable, grain),
-it gathers candidate formulas and sorts them: term lists beat `[]`; among
-equals, more pinned terms beat fewer; tighter constraints beat looser; and
-recency breaks any remaining tie. It then walks the list in order. Each
-formula claims the _overlap_ between its condition and whatever
-space is still unclaimed, and the rest falls to lower-priority formulas. So
-a formula pinned to East masks the default exactly on East, and the default
-fills everything else.
+**Dispatch order.** The engine sorts candidates this way: term lists before
+`[]`; more pinned terms before fewer; tighter constraints before looser; newest
+first when otherwise tied. Each formula fills matching cells not already
+claimed. An East override masks the default only in East.
 
 An **aggregate row** is a cell whose grain omits dimensions shown deeper in
 the table (parent and total rows). Its address pins only its own path's
 dimensions, and drilling a child dimension in adds no terms to the parent's
 condition.
 
-The sigil decides what happens when the grain changes. Drill Product in under
+The `$` prefix decides what happens when the grain changes. Drill Product in under
 Region and a subset `[Region = "East"]` override keeps applying to the finer
 {Region, Product} rows; an exact `$[Region = "East"]` override stops and those
 rows fall through. The first is a rule about Region wherever it is broken out;
@@ -88,10 +80,10 @@ the second is a pin at exactly the Region grain. If an exact rule should have
 followed the drill-in, rewrite that intent as a subset condition and verify
 with a data read. If it was a deliberate cell pin, its stopping is correct.
 
-## 2.3 The expression language
+## 2.3 Expressions
 
-Formulas are authored in readable form (entry names) and stored in a
-canonical form (URIs). Names with spaces are backticked; ambiguous names take
+Write formulas with entry names; the system stores canonical URIs. Backtick
+names with spaces. Ambiguous names take
 a short id suffix (`Revenue#a3f`); a granularity (monthly vs quarterly)
 suffix picks a time grain (`Date.Month`). Everything below uses readable form.
 
@@ -129,9 +121,9 @@ This list is the complete callable set. A name outside it is rejected as
 "Unknown function"; no other catalog adds functions —
 [[build-model:references/grammar-reference.md]] gives the signatures.
 
-### References
+### How references work
 
-**The relativity law: plain references inherit the current segment.** Inside
+**Plain references inherit the current segment.** Inside
 a formula being evaluated at {Department: Eng, Month = 2026-01}, the reference
 `Revenue` means Revenue at exactly that segment. This single rule is why
 one formula text is correct at every grain.
@@ -140,7 +132,7 @@ Do not read that as the whole formula being correct at every grain. Relativity
 governs the expression; the condition decides where the expression runs at all
 (§2.2). A source sum, a ratio, or plain arithmetic over other variables
 re-derives correctly at whatever grain it is evaluated — but under a term-list
-condition its reach depends on the sigil: `$[…]` evaluates only at the named
+condition its reach depends on the `$` prefix: `$[…]` evaluates only at the named
 grain, `[…]` at every grain containing the named dimensions, and `[]`
 everywhere. So when a drilled row shows zeros, the expression is usually
 already right and only its address is wrong:
@@ -159,8 +151,8 @@ Revenue[Dim = <expr>]           a computed coordinate, e.g.
                                Salary[Employee = this.Manager]
 ```
 
-**The collapse-order law: a plain reference is one already-rolled-up
-number.** By the time a formula evaluates, a plain variable reference has
+**A plain reference is one already-rolled-up number.** By formula evaluation,
+a plain variable reference has
 collapsed to the slice's rollup — the rows are gone. An aggregate wrapped
 around it therefore operates on a single value: `sum` passes it through
 harmlessly, `average`/`min`/`max` return it unchanged, `count` returns 1
@@ -202,13 +194,11 @@ Missing segments are nulls, not errors: looking up a segment that does not
 exist yields null, and `sum`/`product`/`count` over an empty fan-out give 0
 while every other aggregate gives null.
 
-## 2.4 Evaluation: one text, many grains
+## 2.4 Recompute at each grain
 
-The same expression text is _re-bound at every grain it is asked at_. At
-binding time the relativity law expands (`Revenue` becomes "Revenue at this
-segment's coordinates"), offsets pick their unit from the grain's
-granularity, and the implicit date term resolves. This is what enforces the
-recompute law from the axioms in SKILL.md:
+The engine binds the same expression again at each requested grain. `Revenue`
+becomes “Revenue at this segment,” offsets use the grain's granularity, and the
+implicit date term resolves. This enforces the recompute rule from `SKILL.md`:
 
 > A coarser value is the formula evaluated at the coarser grain. Nothing ever
 > adds up child cells that were already computed for display.
@@ -243,7 +233,7 @@ plus the first change. To start it anywhere else, write one exact seed cell
 first month the chain evaluates: the first month of its scoped range for a
 windowed chain (a forecast chain seeds the first forecast month), or of the
 table's window for an unscoped one. For one chain on the unsegmented time row,
-write its rule at `$[Date.Month in any]`; the exact sigil intentionally stops
+write its rule at `$[Date.Month in any]`; the `$` prefix intentionally stops
 that chain when a drill-in adds a dimension (references/limitations.md §7). Use `[Date.Month in any]` only
 when the model means an independent chain in every segmentation containing
 Date, and seed each intended segment at its own starting coordinate or
@@ -257,12 +247,12 @@ table computes normally.
 
 ## 2.6 Errors
 
-Three failure tiers, from author-time to run-time:
+Failures occur at three stages:
 
-1. **Syntax errors** reject the formula at validation ("missing '(' at ...").
-2. **Semantic errors** reject specific constructs ("Unknown function", "IF
+1. **Syntax errors** reject the formula during validation ("missing '(' at ...").
+2. **Semantic errors** reject invalid constructs ("Unknown function", "IF
    requires exactly 3 arguments", "Reflexive dot-notation chain is not supported").
-3. **Evaluation errors** poison cells, not tables. An erroring cell carries
+3. **Evaluation errors** affect cells, not whole tables. An error cell carries
    its message plus a trace back through the dependency chain to the formula
    and segment that caused it, and the error short-circuits through any
    expression that consumes the cell. Users see #ERR with a tooltip.
@@ -301,48 +291,51 @@ someone writes a forecast. Last close is workspace-global, manually moved,
 and each scenario has its own (references/04-time.md and
 references/05-scenarios-and-comparisons.md).
 
-## 2.8 Ephemeral formulas
+## 2.8 Unsaved formula evaluation
 
-An agent can evaluate formulas without persisting anything: define named
-request-local variables and reference them as `@name` inside another request
-formula's expression — the only place `@name` means anything. Ephemeral
+To evaluate without saving, define request-local variables and reference them
+as `@name` in another request expression. This is the only place `@name` works. Ephemeral
 formulas behave exactly like saved variables (they recompute per grain, they
 can reference each other and take bracket constraints like
 `stdev(@margin[Date.Month in {...}])`), but they accept only the
-`[]` condition — structurally: an `ephemeral_variables` entry has exactly
+`[]` condition — structurally: an `expressions` entry has exactly
 `name` and `expression`, no condition field to pass. To pre-test a
 grain-, period-, or segment-scoped rule, use `change.set_values` with
 `dry_run` instead: it runs the real write's full validation (condition
-lowering, window resolution, semantic check) and persists nothing — but
+lowering, window resolution, semantic check) and saves nothing — but
 computes no values. Nothing computes an unsaved rule at a non-`[]`
 condition, so the loop is: dry-run for validity, write, verify values
 from the readback, and repair by `formula_id` if wrong.
-This is the preferred tool for exploration and for any computed answer: run
-the engine rather than doing arithmetic on returned cells.
+Prefer this for exploration and computed answers. Let the engine do the math.
 
-The tool is `inspect_variables` `ask.try_formulas`. It takes `ephemeral_variables`, a list of
-`{name, expression}`; `from`/`to`, the periods in scope — both required,
-with no engine default, because a date dimension generates no members
-without a range; `by`, the dimensions that get their own number, where a
-`Date.<grain>` entry sets the reported grain (`Date.Month` below is why the
-answer comes back monthly) but never substitutes for the range; and
-`max_rows` to cap the result. No layout: the question is enough. The
-expression is ordinary formula text: reference a saved variable by its plain
-name (`Revenue`, never `Revenue()` — there are no zero-arg calls), and
-another request formula by `@name`. To read total revenue by month, saving
+The tool is `inspect_variables` `ask.try_formulas`. It takes `expressions`, a
+list of `{name, expression}` for what the model does not hold; `from`/`to`,
+the periods in scope (both required); optionally `rows_by`, ONE dimension
+whose items each get their own number — never Date, which is refused because
+the periods are already the columns — written bare, `Spend Type`, not
+`` `Spend Type` ``, because a field holding one name has no parser to satisfy;
+and `max_rows`. Periods are always the columns, at the model's base grain,
+so the answer comes back per period without asking. No layout: the question is
+enough. The expression is ordinary formula text: reference a saved variable by
+its plain name (`Revenue`, never `Revenue()` — there are no zero-arg calls),
+and another request formula by `@name`. To read a saved variable as the model
+computes it, use `inspect_model_views` `ask.calculate` with a `window` — an
+expression that merely mentions it runs as one all-time rule recomputing
+everywhere, a fair calculation but not what the model says, and the tool
+refuses that shape. To compute a margin the model does not hold, saving
 nothing:
 
 ```
-ephemeral_variables: [{ name = "rev", expression = "Revenue" }]
-from:      2026-01-01
-to:        2026-12-31
-by:        ["Date.Month"]
+expressions: [{ name = "margin", expression = "Revenue - `Cost of Revenue`" }]
+from: 2026-01-01
+to:   2026-12-31
 ```
 
-The engine mints `@rev` as a throwaway do-not-aggregate variable, computes the
-table (so `rev` recomputes at each grain, never a cell-sum), and discards it
-when the request ends. Each result row already carries its `ephemeral_variable` and
-resolved `segments`, so you never parse a URI to read the answer.
+The engine mints `@margin` as a throwaway do-not-aggregate variable, computes
+the table (so `margin` recomputes at each grain, never a cell-sum), and
+discards it when the request ends. Each record carries `ephemeral_variable`
+and resolved `segments`; `computed` restates the grid, and a 0 no formula
+reached carries a `note` saying so.
 
 One instrument that does not exist: a formula delete. `change.operations`
 `delete` removes the entire variable (and is refused while anything
@@ -352,7 +345,7 @@ layer beneath would have produced — or tell the user a true delete is a
 product action, where deleting a variable's `[]` formula also
 resets its aggregation to SUM (references/10-deviations.md D3).
 
-## 2.9 Pattern gallery
+## 2.9 Common patterns
 
 ```
 Gross Margin        Revenue - `Cost of Revenue`
@@ -378,7 +371,7 @@ aggregation setting; min/max/count/first/last have settings and need no
 formula at all. Recipes for every variable shape, indexed by the ask:
 references/13-metric-recipes.md.
 
-Choosing between the two time self-references in a persisted formula:
+Choosing between the two time self-references in a saved formula:
 `[-n]` counts in the evaluating grain's granularity, so a saved
 `Revenue[-12]` silently means twelve quarters back once a view rolls up to
 quarters. Pin the calendar meaning with an explicit offset
@@ -390,10 +383,10 @@ the write tool lower both expression and condition. Canonical condition
 order is property-UUID order with granularity in the URI query; never write
 it by hand. Let `segments` plus the block derive coordinate writes; the
 bounds always compose an exact `$[…]`. Write `condition` yourself when the
-sigil carries intent: `[…]` for a shape that survives richer grains, `$[…]`
+`$` prefix carries intent: `[…]` for a shape that survives richer grains, `$[…]`
 for an exact place. Omitting formula_id is the normal case: a write matches the formula
 already at that address — same variable, predicates, and window, regardless
-of sigil for a nonempty predicate list — and updates it at its stored
+of `$` prefix for a nonempty predicate list — and updates it at its stored
 condition, creating one only when nothing matches. `[]` and `$[]` remain
 different zero-dimension addresses. So writing the same
 place twice updates in place rather than stacking rivals, and formula_id is
@@ -402,7 +395,7 @@ address and you mean a specific one.
 
 Batch mode defaults to 'partial': valid formulas write, invalid
 ones skip, and a ledger is returned. Pass mode='atomic' for
-dependency-chained writes; otherwise a ratio can persist while its base was
+dependency-chained writes; otherwise a ratio can be saved while its base was
 rejected, and the bare-variable default fills in zeros that look right.
 Atomic cuts the other way too: one malformed formula rejects its valid
 siblings, so a batch reject is not a verdict on each member. Isolate the

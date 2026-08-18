@@ -1,12 +1,12 @@
-# 100% Stacked Area Chart Guide
+# 100% stacked area chart
 
-## Chart options shape
+## Options
 
 Add `normalizedTo: 100` to stacked area series:
 
 ```jsx
 function Block({ data }) {
-  const ds = data.revenueMix || { rows: [], series: [] }; // "revenueMix" = the name YOU declared in datasets
+  const ds = data.revenueMix || { rows: [], series: [] }; // Use the name declared in datasets.
   return (
     <Chart
       options={{
@@ -25,12 +25,11 @@ function Block({ data }) {
 }
 ```
 
-## Contract notes
+## Rules
 
-The full stacked area is normalized to 100% at every period. At least two variables are needed for a
-meaningful composition series.
+Each period totals 100%. Use at least two variables.
 
 ## Common mistakes
 
-- Using with only one variable (always 100%, useless)
-- Omitting dateGranularity in the dataset (needs a time axis)
+- Using one variable. It will always show 100%.
+- Omitting `dateGranularity`. The chart needs a time axis.

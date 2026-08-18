@@ -1,8 +1,6 @@
 ---
 name: build-model
-description: Operate the model-authoring surface for variables, dimensions,
-  formulas, and supporting table context. Use when creating, evaluating,
-  validating, or updating model logic.
+description: Create or change model variables, dimensions, formulas, and table context. Use when building model logic, checking a formula, or testing a change before saving it.
 ---
 
 # Build Model
@@ -82,7 +80,7 @@ How coarse grains summarize the base grain is a different question — it takes 
 method, not an expression — so it is `edit_variables` `change.set_time_rollup`.
 
 The same picture runs the reads. `ask.try_formulas` narrows a hypothetical the same
-way: `from`/`to` bounds time, `by` picks which coordinates get their own number.
+way: `from`/`to` bounds time, `rows_by` picks the one dimension whose items get their own number.
 Bounds are the one idea under every formula tool — decide where, then say what.
 
 **Reads take as many ask sections as you need; most writes take one.** An `inspect_` call may fill
@@ -94,11 +92,12 @@ have an order nobody set: on `edit_variables`, a variable operation and a value 
 calls. The exception is `edit_table_blocks`, whose aspects are facets of one act on one table and
 apply together — renaming a block and changing its window is one call, not two.
 
-Use [Saving formulas](#saving-formulas) when the user wants model changes; use [Evaluating without saving](#evaluating-without-saving)
-(`inspect_variables` `ask.try_formulas`) for private reasoning that must not persist. Both jobs start from the shared steps below.
+Decide whether the user wants a model change or just an answer. Use
+[Saving formulas](#saving-formulas) for the former, [Evaluating without saving](#evaluating-without-saving)
+(`inspect_variables` `ask.try_formulas`) for the latter. Both jobs start from the shared steps below.
 
 For the underlying laws (segments, granularity, rollups, validity, and time), read
-[[dimensional-modeling]] with `skill_read`; you need not load the whole manual.
+[[dimensional-modeling]]; you need not load the whole manual.
 
 Read its references by symptom: [[dimensional-modeling:references/limitations.md]] and
 [[dimensional-modeling:references/06-validity.md]] for blank cells;
@@ -120,7 +119,7 @@ Reach for `resolve` `ask.grammar` when the dictionary cannot answer a name: abse
 
 For a dimension item value (a filter or pin like `Department = "Engineering"`), page the dimension's items with `inspect_dimensions` (`ask: {items: {dimension, after}}`); reach for `resolve` `ask.grammar` only when a dimension is too large to page to the item you need, or the item is still absent after paging.
 
-To **create** a value the source data does not carry yet (a new region "Canada", a planned department), call `edit_dimensions` with `change: {add_items: {dimension, values}}`. Do not look the value up first — a value that does not exist yet is the point. The items are model-wide: each shows on every table that slices the dimension, so no table block takes part, and `inspect_dimensions` lists them back under `manual_items`. Only a STRING dimension takes added values; a time axis widens by generating more periods (`time_defaults`, or the block's date range) rather than by adding an item. To pin an intersection of two or more dimensions onto one table instead — a single hand-added cell such as Engineering in NA — use `change: {pin_coordinates: {coordinates, table_block}}`, naming the table the way you read it.
+To **create** a value the source data does not carry yet (a new region "Canada", a planned department), call `edit_dimensions` with `change: {add_items: {dimension, values}}`. Do not look the value up first — a value that does not exist yet is the point. The items are model-wide: each shows on every table that slices the dimension, so no table block takes part, and `inspect_dimensions` reads them back in the dimension's item list, tagged `origin: "manual"`. Only a STRING dimension takes added values; a time axis widens by generating more periods (`time_defaults`, or the block's date range) rather than by adding an item. To pin an intersection of two or more dimensions onto one table instead — a single hand-added cell such as Engineering in NA — use `change: {pin_coordinates: {coordinates, table_block}}`, naming the table the way you read it.
 
 **Wider context scan (only when needed).**
 Beyond the name dictionary, reach for `inspect_pages` (`ask: {list: {...}}` to find pages, then `read` for a named one) or `inspect_model_views` when you need sibling meaning or valid segment values. To read the rules a variable is already defined by, ask `inspect_variables` for its saved formulas: `{"ask": {"saved_formulas": {"variables": ["Revenue"]}}}`, and omit `conditions` to get every formula on it. That is the saved read; `ask.try_formulas` is the separate hypothetical, and it calculates rather than lists.
@@ -197,7 +196,7 @@ tables (the inputs section of an Excel model), so the user reads and tunes every
 
 ## Saving formulas
 
-Read `references/saving-formulas.md` with `skill_read` before you write: which phrasing maps to
+Read `references/saving-formulas.md` before you write: which phrasing maps to
 which item shape, `segments` versus `condition`, every field the response returns, `dry_run` and
 atomic-versus-partial batches, the boundary-read recipe, and the diagnose-fix-verify loop.
 
@@ -239,32 +238,32 @@ nothing. The request is three decisions — the same three every time:
 {
   "ask": {
     "try_formulas": {
-      "ephemeral_variables": [{"name": "margin", "expression": "(Revenue - COGS) / Revenue"}],
+      "expressions": [{"name": "margin", "expression": "(Revenue - COGS) / Revenue"}],
       "from": "2026-01-01", "to": "2026-12-31",
-      "by": ["Region", "Date.Month"]
+      "rows_by": "Region"
     }
   }
 }
 ```
 
-- **`ephemeral_variables`** is what to compute; every entry is calculated and comes back in the
+- **`expressions`** is what to compute; every entry is calculated and comes back in the
   results. Reference one from another as `@name`.
-- **`from`/`to`** is which periods are in scope, and must cover every period any expression
-  references — a June-vs-history ratio needs the history months in range too.
-- **`by`** is what gets its own number: a dimension for one per item, `Date.Month` for one
-  per month, nothing to fold it all into one number per formula. `by` never substitutes for
-  the range: leaving Date out folds the in-scope periods, it does not choose them.
+- **`from`/`to`** is which periods. Periods are always the columns, at the model's base
+  grain — one record per period, automatically. Forecast months exist only inside the range;
+  actuals a bracket pins resolve even outside it.
+- **`rows_by`** (optional) is one dimension: one record per item, per period. A cross of
+  dimensions is a table — read it with `inspect_model_views` instead.
 
-Each record carries `ephemeral_variable`, `segments` (keyed by the names you used, period included), and
+Each record carries `ephemeral_variable`, `segments` (keyed by the `rows_by` dimension, period included), and
 `value`. Evaluation is itself validation — syntax errors fail the call with the problem, and
 semantic issues come back as per-record errors. For the analysis shapes — windowed baselines
 and ratios per item, watermarks, single-segment inspection, before/after `as_of_point` — load
-`references/evaluation-cookbook.md` with `skill_read` when composing the evaluation.
+`references/evaluation-cookbook.md` when composing the evaluation.
 
 No cards render and nothing was saved, so never imply a formula was added to the model. If
 the user wants to keep what you found, switch to [Saving formulas](#saving-formulas) — the
-expression carries over, and the bounds you narrowed `by` with become the bounds of the
-`change.set_values` item.
+expression carries over, and the dimension you narrowed `rows_by` with becomes a bound of
+the `change.set_values` item.
 
 ## Compiled headcount build compatibility
 
@@ -321,10 +320,10 @@ to duplicate the compiled logic in the playbook.
 
 <!-- standards:start -->
 
-Keep proposals and plans short, concrete, and truthful.
+Keep proposals and plans short, specific, and accurate.
 
-Before proposing, inspect enough current state to name real sources and
-assumptions. Do not change the model during this inspection.
+Before you propose work, inspect enough of the current state to name real sources and assumptions.
+Do not change the model during this inspection.
 
 Use `propose_plan` when the work changes model logic, creates several artifacts,
 or belongs to a broader project. Build a single artifact from existing model
@@ -355,92 +354,7 @@ Preserve proposal cardinality: each approved deliverable maps to one persisted a
 
 ### On-demand files owned by embedded skill `project-management`
 
-Read these lazily with `skill_read` using `skillName: "project-management"`; their bodies are not embedded here:
+Read these when you need them; they ship alongside this skill:
 - `references/proposal-card.md`
 
 <!-- embedded-skill:project-management:end -->
-
-<!-- embedded-skill:presentation-and-voice:start -->
-
-## Embedded skill: presentation-and-voice
-
-# Presentation and voice
-
-House style for finance delivery.
-
-## Lead with the point
-
-- Start with the strongest conclusion, decision, or exception. Method and supporting detail come
-  after it.
-- Keep routine success concise. Spend words on assumptions, unresolved checks, risks, and choices
-  that change the result.
-- Avoid false precision when communicating thresholds and rounded values.
-- In completion responses, interpret rich artifacts instead of restating cells. Include source
-  status and next decisions; nest blocks under their page and list unrelated artifacts as peers.
-
-## Make artifacts scannable
-
-In this section, an artifact is a table block.
-
-- Lay a report out as a trajectory: periods across the columns (months unless asked otherwise),
-  variables down the rows, breakdowns nested beneath; only a mapping table, a database view, or
-  an assumptions list the user asked for is timeless.
-- Use sentence case for business rows and labels, preserving established customer terminology.
-- Prefer fewer, clearer digestible rows over a chart-of-accounts dump, while preserving
-  drillability and completeness.
-- Use natural management signs: revenue and spend lines read as positive amounts, and derived
-  profit or loss carries the result. Distinguish zero from missing data.
-- Net contra accounts inside their parent line unless gross presentation is material or preferred.
-- Put related lines in a stable logical order. Within each financial-statement section, place
-  detail lines first and put each subtotal or total immediately after the lines it summarizes.
-- Show subtotals and derived rows distinctly; keep assumptions and provenance beside their outputs.
-- Use consistent units, date labels, rounding, and comparison bases throughout an artifact.
-
-For a P&L, scannable formatting looks like this:
-
-- **Tier 1 — Detail lines** (e.g. Subscription revenue): indented, no color background, no
-  bolding.
-- **Tier 2 — Structural totals** (e.g. Total revenue, Total cost of revenue, Total operating
-  expenses): don't indent (flush-left), bold, no background.
-- **Tier 3 — Mid-tier subtotals**, where one exists (e.g. Total non-headcount expense within the
-  broader operating expense section): indented + bold, no color background.
-- **Tier 4 — Calculated milestones** (e.g. Gross profit, Operating profit/(loss), Net
-  profit/(loss)): flush-left, bold, background color.
-- **Tier 5 — % variables** (e.g. Gross margin %, and Op margin % / Net margin % if you add them):
-  italic, not bold, with a named fill distinct from tier 4's, aligned flush-left.
-
-Note: within one artifact, all tier 4 lines share one named fill and all tier 5 lines share a
-different one. The fill palette is a closed name set with no lightness control.
-Styles are written the same way the table's own menus set them; the table-building manual teaches
-the formatting write surface and its batching constraints.
-
-## Commentary discipline
-
-- A sentence earns its place when it explains a material movement, a ranked contributor, a
-  decision-relevant risk, or an uncertainty the reader could otherwise miss.
-- Quantify the observation and anchor it to a period or comparison. Prefer standard comparisons —
-  year over year, quarter over quarter, trailing three, six, or twelve months — over an arbitrary
-  raw month count when the data supports them.
-- Keep one primary fact per sentence and merge points driven by the same cause.
-- State observed dynamics as observations. Label hypotheses, recommendations, and assumptions as
-  such.
-- Where actuals hand off to forecast, state the handoff. A blended view is fine; an unlabeled one
-  is not.
-
-## Match the audience
-
-- With a finance leader, use standard finance shorthand and emphasize reconciliation, drivers,
-  assumptions, and control points.
-- With a founder or operator, translate rates and accounting terms into dollars, counts, timing,
-  and business consequences; spell out abbreviations on first use.
-- For a board or investor audience, lead with performance against plan, the forward outlook,
-  material risks, and decisions required. Keep operating detail available but subordinate.
-
-## Review loops
-
-When presenting your draft thinking in a chat, show enough detail to make corrections concrete. Ask pointed
-questions about uncertain areas you want user input on, don't ask generic questions like "does
-this look right?". When corrected, re-present only what changed unless the user asks for the whole
-artifact.
-
-<!-- embedded-skill:presentation-and-voice:end -->

@@ -1,18 +1,16 @@
-# Waterfall Chart Guide
+# Waterfall chart
 
-## Chart options shape
+## Options
 
-Waterfall is an enterprise series the injected `Chart` supports out of the box.
-Use a single-variable dataset (rows carry `value`) whose values are already the
-bridge DELTAS (e.g. New / Expansion / Churn) — a raw level series like
-100, 120 renders as +100, +120, not as a start of 100 plus +20; derive
-differences first if all you have is levels. Map the rows into ordered steps
-and declare the ending total with `totals` — without it every row renders as
-another delta, not a total:
+The injected `Chart` supports the enterprise waterfall series. Use a
+single-variable dataset whose `value` rows are already bridge changes, such as
+New, Expansion, and Churn. Levels such as 100 and 120 render as +100 and +120,
+not 100 then +20, so calculate changes first. Keep steps in order and declare
+the ending total with `totals`; otherwise it renders as another change:
 
 ```jsx
 function Block({ data }) {
-  const ds = data.arrBridge || { rows: [], series: [] }; // "arrBridge" = the name YOU declared in datasets
+  const ds = data.arrBridge || { rows: [], series: [] }; // Use the name declared in datasets.
   const steps = ds.rows.map((r) => ({ step: r.date, value: r.value || 0 }));
   return (
     <Chart
@@ -41,14 +39,13 @@ function Block({ data }) {
 }
 ```
 
-## Contract notes
+## Rules
 
-- Waterfall rows are ordered deltas in a single-variable dataset; multi-variable rows do not expose
-  `value`.
+- Waterfall rows are ordered changes in one variable. Multi-variable rows have no `value`.
 - Positive, negative, and total colors come from the branded theme. If an override is required,
   use the corresponding theme tokens rather than literal colors.
 
 ## Common mistakes
 
-- Omitting `totals` (the ending value renders as one more delta instead of a total)
-- Unordered steps (the sequence is the story — build the rows in bridge order)
+- Omitting `totals`. The ending value renders as another change.
+- Using unordered steps. Build rows in bridge order.

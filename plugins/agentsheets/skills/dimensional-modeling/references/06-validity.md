@@ -1,26 +1,19 @@
-# Validity: the laws of well-formed blocks
+# Valid and invalid blocks
 
-What is actually enforced, where, and what failure looks like. **Saving is
-lenient, calculating is strict.** A config can save cleanly and still be
-broken. Builds on references/03-table-blocks.md.
+This file explains what the system checks and how failures appear. **Saving is
+lenient; calculation is strict.** A config can save and still fail later. It
+builds on references/03-table-blocks.md.
 
-## 6.1 The four gates
+## 6.1 Four validation stages
 
 1. **UI construction** stops many bad shapes from being buildable. Nothing an
    agent does passes through this gate, so never assume it protected an edit.
 2. **Write-time validation** checks structure (axis types on the right side,
    ids are UUIDs, no query params in property URIs, comparison fields
    well-formed, comparisons mutually exclusive) plus variable placement
-   (§6.2 law 4). How much more it checks depends on the door
-   (references/11-block-grammar.md). The rule: prefer `view`, and
-   `dry_run` any raw `table_config` write — it runs every check without
-   persisting.
-
-   | door                                    | existence checking                                                                                          |
-   | --------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
-   | `view`                                  | names resolve before anything persists; a stale or hallucinated name is a check error before anything saves |
-   | `table_config`, table omitted (create)  | validates in-call that variables and dimensions exist                                                       |
-   | `table_config` naming an existing table | reconfigures through the lenient gate, which does not check existence                                       |
+   (§6.2 law 4). A `view` resolves every name before
+   anything saves: a stale or hallucinated name is a check error first.
+   `dry_run` runs the same checks without saving.
 
 3. **Planning** (start of every calculation) enforces the semantic laws.
    Violations kill the whole request.
@@ -38,29 +31,28 @@ recover, or retry"); a per-cell #ERR; a silent blank; a silent _plausible
 wrong number_. The last two are the dangerous ones. They motivate the
 verify step in references/07-modeling-method.md.
 
-Tool errors: every failed tool call reads "failed with HTTP 422: …". The
-number is the same for every failure and carries no information. The
-message after it is the signal. When that message quotes a second status
-("calculation service returned 500: …"), the engine itself failed, and the
-text after the 500 is your best diagnostic. Read it carefully but literally:
-it speaks the engine's internal vocabulary, its ids resolve through no tool
-you have, and a name it prints (`Date`, `Amount`) may belong to a different
-entry than the one you know by that name.
+Tool errors: "failed with HTTP 422: …" means the call was refused — what you
+sent, or the model it names, which you may not have authored. "failed with
+HTTP 424: …" means a service behind the tool failed instead — not your input,
+so the same call may be worth repeating with a different breakdown, and
+giving up on verifying is the wrong answer to it. The message after the
+number carries the rest. When it quotes a second status ("calculation service
+returned 500 (internal/unexpected): …"), the engine itself failed; a quoted
+422 means it refused the model it was handed instead, and names what to
+repair. The code in parentheses says which kind, and the text after it is
+your best diagnostic. Read it carefully but literally: it speaks the
+engine's internal vocabulary, its ids resolve through no tool you have, and
+a name it prints (`Date`, `Amount`) may belong to a different entry than the
+one you know by that name.
 
-## 6.2 The hard laws
+## 6.2 Required rules
 
-For each: the law, and what violating it looks like.
+Each item says the rule and what happens when it is broken.
 
 1. **Axis side must match.** Row trees hold only row-typed axes, column trees
    only column-typed, recursively. Violation: rejected at save.
-2. **Persisted ids are fresh UUIDs; property URIs carry no query params.**
-   Node ids are the join key between config, addresses, and edits. You
-   never invent one: a view needs no ids at all, `copy_from` remints
-   them, and a `table_config` create mints omitted ids server-side. Supply
-   one only when another field (an overrideId, a drill-in anchor) must
-   reference it; get it from `generate_uuids`. The URI half is its own
-   rule: a property URI names the entry bare — nothing rides on it as a
-   query string. Violation of either half: rejected at save.
+2. **Property URIs carry no query params.** A property URI names the entry
+   bare — nothing rides on it as a query string. Violation: rejected at save.
    (Ad hoc evaluation configs may use short readable ids, which come back
    in row addresses, so results decode readably.)
 3. **Every property axis names exactly one variable or dimension, non-empty.** The array
@@ -79,18 +71,16 @@ For each: the law, and what violating it looks like.
    saved block, a miss is treated as data corruption and fails loudly. For
    agent-authored ad hoc reads it is a clean rejection naming the stale or
    hallucinated id. Scenario-comparison calculations instead prune the
-   missing axis from that scenario. Only the lenient reconfigure door can
-   let a miss reach a saved block — the §6.1 rule (grammar, or `dry_run`)
-   covers it.
+   missing axis from that scenario. A view write cannot create a miss: every
+   name resolves before anything saves (§6.1). A saved block acquires one
+   when what it names is deleted afterwards.
 8. **One comparison kind per block.** Scenario and time comparison are
    mutually exclusive; enforced at save, at the tools, and in the engine.
    In `edit_table_blocks`, setting one comparison kind clears the other.
 9. **Time comparison needs exactly one date axis** on one side with a real
    granularity (monthly vs quarterly), and an offset count of at least 1
    (references/04-time.md §4.6). `edit_table_blocks` refuses period
-   comparison on a block with no date axis up front, so the deferred kill
-   exists only through a raw `table_config` write: there, a date-axis
-   violation passes save and kills calculation.
+   comparison on a block with no date axis up front.
 10. **Overrides reference a same-side sibling, acyclically.** Violation:
     rejected at save.
 11. **Drill-in breadcrumbs must align with the ancestor chain.** Misalignment
@@ -106,24 +96,33 @@ For each: the law, and what violating it looks like.
     contrast, are legal structurally and only error per-cell when a true
     same-period cycle exists, references/02-formulas.md §2.5.)
 
-## 6.3 Representable but broken
+## 6.3 Shapes that can exist but cannot calculate
 
-States that save fine and fail at the next calculation. Grammar cannot
-express any of them, so they reach a saved block only through a raw
-`table_config` write — which is why every such write gets a `dry_run`
-(§6.1). The states planning will kill:
+States a saved block can already be in that fail at the next calculation.
+Grammar cannot express any of them, so no agent write creates one: they
+arrive from UI-authored structure, or from a later deletion elsewhere that
+leaves an axis naming something gone. The states planning will kill:
 
-- variable on both sides, or two variables on one path (§6.2 law 4)
+- variable on both sides, or two variables on one path (§6.2 law 4 — every
+  save door rejects it, so only a block saved before the check carries it)
 - empty property list on a property axis (§6.2 law 3)
 - a freeform axis in a saved config (§6.2 law 6)
 - a deleted variable or dimension still referenced by an axis (§6.2 law 7)
 - a deleted scenario still listed for comparison (skipped by the app;
   rejected if sent directly)
 
-## 6.4 Valid but misleading
+Do not reason a block into this list from a symptom — ask.
+`inspect_table_blocks` `ask.problems` checks a saved block and names each
+problem, advisory findings marked apart.
 
-The subtler class: configs the system computes happily that still mislead
-readers. These are judgment calls the tooling mostly cannot catch.
+It never calculates. A clean answer clears the declaration, not the block —
+a symptom that survives it is a calculation failure: §6.5, then §6.6. And
+re-declaring the view is not the repair; it rewrites rows and columns and
+nothing else. Fix what each problem names.
+
+## 6.4 Valid shapes that can mislead
+
+Some configs calculate but still mislead readers. Tools cannot catch most of these cases.
 
 1. **Ratio or average broken down by a dimension.** Correct per-segment
    recompute means the parent row is _not_ the sum of children. That is
@@ -152,10 +151,10 @@ readers. These are judgment calls the tooling mostly cannot catch.
    first: the item count in `inspect_dimensions`' listing IS that
    check. Never enumerate a dimension just to count it
    (references/07-modeling-method.md).
-10. **A persisted formula that no longer parses** is silently skipped and the
+10. **A saved formula that no longer parses** is silently skipped and the
     variable falls back to defaults (references/02-formulas.md §2.6). Numbers change with no error
     anywhere.
-11. **A condition's sigil controls drill-in reach.** An exact `$[…]` override
+11. **A condition's `$` prefix controls drill-in reach.** An exact `$[…]` override
     stops when adding a dimension changes the grain; a subset `[…]` override
     keeps applying wherever the named dimensions remain present. Use exact for
     a cell pin meant to stop and subset for a named-dimension rule meant to
@@ -168,8 +167,10 @@ readers. These are judgment calls the tooling mostly cannot catch.
 - **Whole-table overlay, or a saved block's read failing as a whole**: a
   structural law broke at planning (variable placement, missing variable or dimension,
   freeform reached the engine). Fix the block; retrying changes nothing.
+  `inspect_table_blocks` `ask.problems` names which law broke, on a saved
+  block, without calculating (§6.3).
 - **A rejected request naming a field**: the request said something
-  incoherent (comparison rules, time-comparison axis rules, bad ids). The
+  invalid (comparison rules, time-comparison axis rules, bad IDs). The
   named field is the offender.
 - **#ERR cells**: a formula problem. The trace names the originating formula
   and segment. Errors flow downstream through every dependent cell. Fix
@@ -184,7 +185,7 @@ readers. These are judgment calls the tooling mostly cannot catch.
   errors and nothing is blank, which is why this survives every check above
   it. Compare the two levels before anything else — a variable that is
   really empty reads zero at both (references/09-the-layer-model.md §9.5).
-- **Plausible but wrong numbers**: the 6.4 list. Re-derive what the parent
+- **Plausible but wrong numbers**: the 6.4 list. Recalculate what the parent
   rows should mean, and check the applicable formula regime before doubting
   the engine.
 
@@ -196,16 +197,15 @@ that to cells that did come out with a value. Only these silent cases need that 
 above self-report — an overlay or rejection names the broken law, and an
 #ERR trace names its formula.
 
-## 6.6 From symptom to owner: the route
+## 6.6 Find the rule that owns a value
 
-§6.5 classifies the failure; this walks to its owner. For any cell whose
-value you cannot explain, in order:
+After classifying a failure in §6.5, find the responsible rule in this order:
 
 1. **Address the cell.** Read its grain off the grid (rows left of it,
    columns above it — references/09-the-layer-model.md §9.1) and its
    regime: does its period fall before or after Last close _at this
    block's granularity_ (references/04-time.md §4.5)? If the cell is a
-   parent or total, jump to step 5 first — totals have their own physics,
+   parent or total, jump to step 5 first — totals have their own rules,
    and that check is cheap.
 2. **Ask the engine which rule filled it.** Re-read the cell with
    `inspect_model_views` `ask.calculate`; add `formula_origins: "all"` when the

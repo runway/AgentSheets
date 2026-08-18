@@ -1,59 +1,51 @@
 # Evaluation cookbook
 
-Request patterns for `inspect_variables` `ask.try_formulas`: multi-formula, per-segment analysis
-that answers a question without persisting anything. Expression syntax lives in
-`references/formula-grammar.md`. Read this when composing an evaluation, not before: the
-manual's steps cover the ordinary path.
+These `inspect_variables` `ask.try_formulas` patterns answer per-segment
+questions without saving anything. See `references/formula-grammar.md` for
+expression syntax. Read this only when composing an evaluation.
 
-## The request is the question
+## Request shape
 
-A `ask.try_formulas` call is three decisions, and they are the same three decisions every time:
+Each `ask.try_formulas` call makes three choices:
 
 ```json
 {
   "ask": {
     "try_formulas": {
-      "ephemeral_variables": [{ "name": "margin", "expression": "..." }], // WHAT to compute
+      "expressions": [{ "name": "margin", "expression": "..." }], // WHAT to compute
       "from": "2025-12-01",
-      "to": "2026-06-30", // WHICH periods are in scope
-      "by": ["Customer", "Date.Month"] // WHAT gets its own number
+      "to": "2026-06-30", // WHICH periods
+      "rows_by": "Customer" // one record per item (optional)
     }
   }
 }
 ```
 
-The blocks below show the `ask.try_formulas` body alone. Each one goes inside
-`{"ask": {"try_formulas": ...}}` the same way.
+Examples below show only the `ask.try_formulas` body. Put each inside
+`{"ask": {"try_formulas": ...}}`.
 
-`by` and `from`/`to` answer different questions and neither substitutes for the other. `by`
-decides which numbers come back: add `Date.Month` for one per month, leave every date entry
-out to fold the periods together, add a dimension for one per item. `from`/`to` decide what
-is in scope at all — they are required because the engine has no default: without a range no
-period exists to compute over, even when `by` names no date.
+Periods are always the columns, at the model's base grain: one record per period, per
+`rows_by` item, per expression — no date field to remember. `from`/`to` choose the periods.
+One asymmetry matters: forecast months exist only inside the range (a pin at one outside it
+reads 0), while actuals a bracket pins resolve even outside it.
 
-One rule prevents most empty results: **`from`/`to` must cover every period any expression
-references**, not just the periods you want to read. A ratio comparing June against a
-December–May baseline needs `from: "2025-12-01"`, even if you only read June. If cells that
-should have history come back empty, widen the range first.
-
-Each result record carries `ephemeral_variable` (the formula's name), `segments` (the resolved
-coordinates, keyed by the names you used in `by`, with the period under `period`), and
-`value`. Read identity from those fields. Evaluation doubles as validation: syntax errors
-fail the call naming the problem, and semantic issues come back as per-record errors. Fix
-and call again.
+Each result record carries `ephemeral_variable` (the formula's name), `segments` (keyed by
+the `rows_by` dimension, with the period under `period`), and `value`. Read `computed`
+before the records; it summarizes the grid in one line. A zero that no formula reached has
+a `note`; a calculated zero does not. Syntax errors fail the call. Semantic issues appear
+as record errors. Fix them and call again.
 
 In new expressions, author power, not-equal, and equal with the Excel spellings `^`, `<>`,
 and `=`.
 
-## Pattern: windowed aggregates + ratio, one record per dimension item
+## Windowed aggregates and a ratio
 
-The workhorse shape for "compare each X's current value against its own history". Every
-number — windows, baselines, ratios — is a formula; `by` fans them out per item; you read
-judgments off the records and compute nothing yourself.
+Use this to compare each item's current value with its history. Formulas compute
+the windows, baselines, and ratios; `rows_by` returns one set per item.
 
 ```json
 {
-  "ephemeral_variables": [
+  "expressions": [
     {
       "name": "current_total",
       "expression": "sum(Variable[Date.Month = \"2026-06\"])"
@@ -73,17 +65,17 @@ judgments off the records and compute nothing yourself.
   ],
   "from": "2025-12-01",
   "to": "2026-06-30",
-  "by": ["Customer"]
+  "rows_by": "Customer"
 }
 ```
 
 - The explicit month set pins the comparison window; compose it from known calendar facts at
   request time. With month references, each set member is that month's bucketed total, so
   `median(...)` is the median **monthly** value.
-- An unprefixed lookup inherits the record's coordinates: `by: ["Customer"]` makes every
+- An unprefixed lookup inherits the record's coordinates: `rows_by: "Customer"` makes every
   expression per-customer with no per-customer spelling. The bracket overrides only what it
   names. That is why one expression is correct for every record.
-- `@name` references another entry in `ephemeral_variables`. Every listed entry is calculated and
+- `@name` references another entry in `expressions`. Every listed entry is calculated and
   comes back in the results, so an intermediate you do not want to read must be inlined in the
   expression rather than given its own entry.
 - Several outputs simply mean several formulas: each gets the same breakdown.
@@ -94,7 +86,7 @@ prints them — or by a second dimension (`[Type in {"Expense", "Cost of Goods S
 Many items times many formulas can hit `max_rows`; if records come back truncated, drop
 formulas you will not read or split the request by a coarser dimension.
 
-## Measure recipes: evidence for trend and anomaly analysis
+## Trend and anomaly measures
 
 Composable formulas for richer evidence than a single ratio. `WINDOW` below is an explicit
 month set as in the pattern above. `@latest` is the period under test, e.g.
@@ -125,34 +117,39 @@ Period-vs-period comparisons are expressions too: `@latest` and `@prior` as two 
 delta and percent as two more. Composing them costs four lines and keeps every comparison
 window independent, which one table-level offset never could.
 
-## Pattern: how far does the data go (watermark)
+## Find the latest data point
 
 Ingested data ends at the last sync, not at today. Before pace math, find the last populated
-day:
+day. Daily grain is a view read, not a probe — `inspect_model_views` `ask.calculate` with a
+daily window:
 
 ```json
 {
-  "ephemeral_variables": [
-    { "name": "daily_total", "expression": "sum(Variable)" }
-  ],
-  "from": "2026-06-01",
-  "to": "2026-06-30",
-  "by": ["Date.Day"]
+  "ask": {
+    "calculate": {
+      "view": { "variables": [{ "variable": "Variable" }] },
+      "window": {
+        "start": "2026-06-01",
+        "end": "2026-06-30",
+        "granularity": "DAY"
+      }
+    }
+  }
 }
 ```
 
-The last record with a value is the data watermark. Anchor "how far through the period" to
-it. When staleness matters, compare it with the source coverage reported by the delegated
+The last populated day is the data watermark. Use it to measure how far the data goes
+through the period. When staleness matters, compare it with source coverage from the delegated
 ingestion session described in `[[integrations]]`.
 
 ## Pattern: inspect one segment
 
 To decompose a single dimension item (one account, one region) by a second dimension, pin
-the first inside the expressions and put the second in `by`:
+the first inside the expressions and put the second in `rows_by`:
 
 ```json
 {
-  "ephemeral_variables": [
+  "expressions": [
     {
       "name": "seg_total",
       "expression": "sum(Variable[`Dimension A` = \"<item>\"])"
@@ -164,7 +161,7 @@ the first inside the expressions and put the second in `by`:
   ],
   "from": "2025-12-01",
   "to": "2026-06-30",
-  "by": ["Dimension B", "Date.Month"]
+  "rows_by": "Dimension B"
 }
 ```
 

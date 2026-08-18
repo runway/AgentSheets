@@ -1,12 +1,23 @@
 # Formula grammar
 
-Expression semantics and the patterns worth reaching for. The syntax inventory
-itself lives in `grammar-reference.md` beside this file: the grammar productions,
-entry-point shapes, reference forms, operators and precedence, literals, and every
-function signature. That file is generated from the grammar and verified against
-the parser, so it is the authority whenever the two disagree.
+This file explains formula meaning and common patterns. For accepted syntax,
+operators, precedence, literals, and function signatures, use the generated
+`grammar-reference.md`. It is verified against the parser and wins if the files differ.
 
-## Variable or Dimension references
+Route by what you are writing:
+
+| Writing                                          | Section                                         |
+| ------------------------------------------------ | ----------------------------------------------- |
+| a reference: backticks, `#hex`, `$`, `this.`     | Variable and dimension references; Dot notation |
+| a filter: `in {…}`, `not in`, `where`, ranges    | Segment lookups                                 |
+| a date grain, a date offset, a nearby period     | Date granularity in segmented formulas          |
+| a trailing average, TTM, or to-date (YTD) metric | Trailing windows and to-date metrics            |
+| a periodic total from dated source rows          | Inclusive overlap proration                     |
+| a formula reading an imported variable           | Preferred time binding for imported variables   |
+| `if`/`iferror`, date arithmetic                  | Functions                                       |
+| growth, running totals, opening balances         | Common formula patterns                         |
+
+## Variable and dimension references
 
 Formulas reference variables and dimensions by readable name rather than storage URIs.
 
@@ -25,7 +36,7 @@ Formulas reference variables and dimensions by readable name rather than storage
 | `Date.Month`                    | Date dimension pinned to month granularity                                                          |
 | `` `Fiscal Date`#a3f.Quarter `` | Backticks, disambiguator, and granularity together                                                  |
 
-A **formula condition** is a bracketed group and never appears inside an
+A **formula condition** is a bracketed group. It never appears inside an
 expression: `[]` matches every segmentation, `[Dim in any]` any segmentation
 containing that dimension, `$[…]` exactly the named set, and `$[]` only the
 empty segmentation.
@@ -37,7 +48,7 @@ columns, not model variables and dimensions:
 <runway:exttables/UUID/columns/ColumnName/>
 ```
 
-External-table references are plain only: no `$` sigil, and no brackets of
+External-table references are plain only: no `$` prefix and no brackets of
 any kind.
 
 ## Dot notation
@@ -60,7 +71,7 @@ include only the listed predicates.
 Use `Revenue$` or `Revenue$[...]` only for an absolute lookup that should not
 inherit the current segment.
 
-## Segment lookups
+## Look up another segment
 
 Combine multiple dimension predicates in a single lookup:
 
@@ -138,7 +149,8 @@ Revenue[Date.Month in "2026-01":[-1]]
 
 The first range is fixed. The second runs from twelve months before the current
 `Date.Month` through the previous month. The third begins at a fixed month and
-ends at the month before the current segment.
+ends at the month before the current segment. One aggregate over such a range
+is the window idiom (Trailing windows and to-date metrics below).
 
 Within a lookup predicate, an offset can appear anywhere in the right-hand
 expression and always uses the nearest predicate root:
@@ -248,6 +260,35 @@ Choose the key grain to match what it addresses:
   buckets, so match the key grain to the target's data:
   `` `Headcount Payroll`$[Date.Month = this.Date.Month]``.
 
+## Trailing windows and to-date metrics
+
+A window metric is one aggregate over a relative Date range: the range
+predicate selects the periods, the aggregate folds them. In a monthly table:
+
+```formula
+average(Revenue[Date.Month in [-3]:[-1]])
+```
+
+The trailing 3-month average — three months back through last month, moving
+with each cell. The range states the window once: widen it (`[-12]:[-1]` is
+trailing twelve months), include the current month (`[-2]:[0]`), or swap the
+aggregate (`sum`, `min`, `max`, `stdev`) without restating any terms.
+
+Range endpoints are full expressions, so a period-start function anchors a
+to-date window:
+
+```formula
+sum(Revenue[Date.Month in startofyear([0]):[0]])
+```
+
+Year-to-date through the current month; `startofquarter([0])` starts the
+window at the quarter instead, for quarter-to-date.
+
+Never expand a window into shifted copies. `(Revenue[-1] + Revenue[-2] +
+Revenue[-3]) / 3` hides the window: the width is hard-coded into the term
+list and the divisor, and every change rewrites both. When a draft repeats
+one reference with only the offset changing, collapse it into a range.
+
 ## Inclusive overlap proration
 
 Use this shape when one periodic total comes from source rows with an amount,
@@ -313,7 +354,7 @@ parent rollup. Read the monthly result back. A nonzero source with zero in
 every active month means the Date and record grains were not both declared.
 Do not copy source dates or amounts into literals.
 
-## Preferred time binding for imported variables
+## Bind imported variables to time
 
 Use the property marked `isSystemDate: true` as the model's canonical time axis; transaction,
 pay-period, effective, and close dates are dimensions and filters, not the model axis. When a
@@ -497,7 +538,7 @@ Non-numeric operands are an error; a `NULL` operand returns `NULL`. Composes
 with the component functions and `datedif`, e.g.
 `datedif(date(2026, 1, 1), Date, "M")`.
 
-## Common formula patterns
+## Common patterns
 
 Simple pass-through:
 

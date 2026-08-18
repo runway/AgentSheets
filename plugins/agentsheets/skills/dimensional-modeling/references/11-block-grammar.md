@@ -1,10 +1,8 @@
-# The view: table structure as a declaration
+# Table view grammar
 
-A block has one meaning and several renderings (SKILL.md's "one meaning,
-many renderings"): the sentence you say, the config JSON, and the **view**
-this file defines — the declaration of what the table computes. This file
-builds on references/03-table-blocks.md; the pivot law and the crossing
-law reappear here, enforced by the tools.
+A block has one meaning in three forms: a plain sentence, config JSON, and the
+**view** defined here. The view declares what the table computes. This file
+builds on references/03-table-blocks.md.
 
 ## 11.1 The declaration
 
@@ -23,8 +21,8 @@ A view is variables plus breakdowns:
 }
 ```
 
-Each `variables[]` entry is one row stack, carrying EXACTLY ONE of two
-things. `variable` is the ordinary case: a readable name, resolved like any
+Each `variables[]` entry is one row stack with exactly one of two fields.
+`variable` is the usual case: a readable name, resolved like any
 formula reference, optionally with its own `breakdown`. `dimension` instead
 places a dimension on the value axis as a **mapping**, where each cell shows
 that dimension's item for its row and column rather than a measured value:
@@ -38,7 +36,7 @@ One City per Name. A mapping shows one item per cell, so it takes no
 a dimension under `variable`, is refused either way rather than quietly
 reinterpreted. The top-level `breakdown` is shared by every entry and becomes
 the columns. Breakdown spelling — comma descends, braces fork, branch
-conditions, `in {…}` filters, `.Month` grains — is normative in the
+conditions, `in {…}` filters, and `.Month` grains — is defined in the
 `Table views: breakdowns` section of
 [[build-model:references/grammar-reference.md]], where every example
 parses against the real grammar. The example below routes a term under
@@ -50,7 +48,7 @@ other department stays closed.
 [Department, {Level[Department = "Engineering"], Owner[Department = "Operations"]}]
 ```
 
-## 11.2 The rendering the tools speak
+## 11.2 Tool format
 
 Reads return the view two ways: `view`, the exact shape a write takes, and
 `signature`, its text — one line per entry with its breakdown (a mapping
@@ -62,12 +60,10 @@ and `presentation` beside them for how it shows. Its `window`, `comparison`
 and `sort` are the words `edit_table_blocks` takes, so they edit straight
 back; `transposed` states orientation instead, because `change.transpose`
 flips rather than sets (§11.3). Every other read describes a table the same
-way, page reads included. `ask.config` is the one read that hands back a
-stored `table_config`, for the whole-config replace that needs the block's own
-node ids (§11.5).
+way, page reads included.
 
 Writes go through `edit_model_views` `change.configure_table`: each `tables[]`
-entry carries EXACTLY ONE of `view` or `table_config`, and entries apply
+entry carries a `view`, and entries apply
 independently. A call also performs one operation — it creates, or updates,
 or carries one copy — and mixing operations (or batching copies) is
 rejected whole.
@@ -80,11 +76,11 @@ surviving drill-ins, the source's window (the copy path refuses a
 and the whole settings bag (column widths included); §11.4 carries the
 node-id law a copy runs under. Checking
 runs in two layers: view-grammar and model errors reject before anything
-persists on every write, but the config checks (the missing-time-column
-warning and its kin) run on the write only for a config-JSON create —
-`dry_run` (inside `change.configure_table`) is the only way to see them on a
-view create or any update. Only structure a view
-cannot describe uses `table_config` (11.5).
+is saved on every write, and the config checks (the missing-time-column
+warning and its kin) ride a create's own result as advisory warnings. On an
+update, `dry_run` (at the top level of the call, beside `change`) is how you
+see them first — it runs the same checks without saving
+(references/06-validity.md §6.1). Structure a view cannot describe is not agent-writable at all (§11.5).
 
 The pivot law carries over verbatim: two blocks with the same view up to
 row/column placement hold the same numbers. The default placement bands the
@@ -93,10 +89,10 @@ variables down the rows and runs the shared breakdown across the columns;
 `edit_table_blocks`) swaps the axes whole, which is how "variables across
 the top" is built. A variable inside a breakdown is refused; a dimension in
 the variables list is §11.1's mapping form, not an error.
-Views are therefore the unit of reuse. Compare signatures before building anything new, and prefer
+Views are the unit of reuse. Compare signatures before building anything new, and prefer
 re-declaring a block whose signature already covers the request.
 
-## 11.3 A view says what the table computes — nothing else
+## 11.3 A view contains calculation structure only
 
 This is the law the writes are built on. Window, comparison, sort, column
 widths, visibility, the formula lane: none of it is part of a view, so a
@@ -130,9 +126,7 @@ does not carry — node ids, aggregation
 functions, sort, the formula lane, surviving segment drill-ins,
 presentation state — is reconciled from the block itself: structurally
 matched rows and columns keep their axis ids (drill-in anchors and
-overrides stay valid) and everything that rides with them. Because a view
-carries no ids, building or reshaping a table never calls `generate_uuids`;
-the write mints and reconciles every one. A match is
+overrides stay valid) and everything that rides with them. A match is
 exact on three things: the side (row vs column), the chain of properties
 from the root down to the node, and the node's own drill-in coordinates
 — reordering siblings is safe (order never enters the key), but changing
@@ -143,10 +137,9 @@ silent loss. `copy_from` runs the same reconciliation against its source,
 then mints every node id fresh — a copy never shares axis identity with
 its source.
 
-To edit a block, hand a view to `change.configure_table` naming the table. Read
-its config with `inspect_table_blocks` `ask.config` when you need ids, but
-never rebuild a `table_config` from a view and hand that back: a compiled
-config carries fresh ids and none of the carried-over state.
+To edit a block, hand a view to `change.configure_table` naming the table.
+The write reconciles against the block's current config, keeping everything
+the view does not describe.
 
 Author time yourself: a table of native variables carries a Date breakdown
 (`"breakdown": "[Date.Month]"`) that you write in, with a real window on
@@ -167,7 +160,7 @@ table, a database view, or an assumptions list the user asked for as such
 
 ## 11.5 The boundary
 
-Structure a view cannot describe stays on `table_config`, and a read
+Structure a view cannot describe is not agent-writable; a read
 names it in the signature's `# kind` lines: generated axes (`generate`),
 role overrides other than §11.1's mapping form, multi-property
 (flattened) axes, freeform axes, per-item overrides, drill-in paths

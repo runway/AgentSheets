@@ -1,10 +1,9 @@
-# Line Chart Guide
+# Line chart
 
-## Chart options shape
+## Options
 
-Declare one dataset per chart (dateGranularity/dateRange live in the dataset's
-`table_config.settings`; `MONTH` is the most common granularity). The dataset
-key below (`revenue`) is the `name` you declared in `datasets` — substitute yours:
+Declare one dataset per chart. Put its range and granularity in `window`;
+`MONTH` is most common. Replace `revenue` with the dataset's declared name:
 
 ```jsx
 function Block({ data }) {
@@ -20,8 +19,8 @@ function Block({ data }) {
 }
 ```
 
-For 2-3 variables in one dataset, derive the series from the dataset instead of
-inventing keys — multi-variable rows are keyed by `series[i].key`, not `value`:
+For two or three variables, derive series from the dataset. Multi-variable rows
+use `series[i].key`, not `value`:
 
 ```jsx
 series: ds.series.map((s) => ({
@@ -32,15 +31,13 @@ series: ds.series.map((s) => ({
 }));
 ```
 
-## Contract notes
+## Rules
 
 - Single-variable rows expose `value`; multi-variable rows use each `series[i].key`.
-- Dataset variable or dimension URIs should match the corresponding table's variable rows when the visual and
-  table show the same variables.
-- The injected branded theme supplies series colors; hardcoded colors are neither required nor
-  portable across display modes.
+- When a chart and table show the same variables, use the same variable or dimension URIs.
+- The branded theme supplies colors. Hardcoded colors may fail in other display modes.
 
 ## Common mistakes
 
-- Forgetting `dateGranularity` in the dataset's `table_config.settings` (no proper time axis)
-- Hardcoding variable-name yKeys (`yKey: "revenue"`) — read keys from `ds.series`
+- Omitting granularity from `window`. The chart will lack a proper time axis.
+- Hardcoding variable-name y keys. Read them from `ds.series`.

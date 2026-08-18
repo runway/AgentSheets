@@ -1,12 +1,12 @@
-# Stacked Bar Chart Guide
+# Stacked bar chart
 
-## Chart options shape
+## Options
 
-Each variable in the dataset becomes a stack segment via `stacked: true`:
+Set `stacked: true` so each variable becomes one segment:
 
 ```jsx
 function Block({ data }) {
-  const ds = data.revenueByProduct || { rows: [], series: [] }; // "revenueByProduct" = the name YOU declared in datasets
+  const ds = data.revenueByProduct || { rows: [], series: [] }; // Use the name declared in datasets.
   return (
     <Chart
       options={{
@@ -24,11 +24,11 @@ function Block({ data }) {
 }
 ```
 
-## Contract notes
+## Rules
 
-- Every dataset series becomes one stack segment.
-- Adding `normalizedTo: 100` to the stacked series produces the normalized variant.
+- Each dataset series becomes one segment.
+- Add `normalizedTo: 100` for a 100% stack.
 
 ## Common mistakes
 
-- Using only one variable (no stacking visible — use a plain bar instead)
+- Using one variable. Use a plain bar instead.

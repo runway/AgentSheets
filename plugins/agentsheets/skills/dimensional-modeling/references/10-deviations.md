@@ -1,19 +1,15 @@
-# Where the engine deviates from the clean structure
+# Engine exceptions
 
-SKILL.md's correspondence table says which outside folklore transfers into
-this system. This file is the verified list of places it must not be trusted —
-each found by pressing the clean mathematics against the engine's source and
-adversarially re-verifying. Load it before acting on an analogy for
-aggregation choice, formulas that might overlap, offsets, or totals reconciled
-across grains. Each entry: the symptom you'd see, the
-mechanism, and the decision it changes. Entries are numbered D1–D7, and other
-references cite them by that number.
+This file lists verified exceptions to the general rules in `SKILL.md`. Read it
+before relying on an analogy for aggregation, overlapping formulas, offsets,
+or totals across grains. Each numbered item gives the symptom, cause, and
+required decision.
 
 **D1 — Two formulas tie on one cell; the winner is whoever saved last.**
-Precedence is (condition class, arity, pinned count, tightness, recency), and
-time-window bounds add nothing — so a period-bound rule and a segment-bound
+Precedence is condition class, number of terms, pinned count, tightness, then recency.
+Time-window bounds add nothing, so a period-bound rule and a segment-bound
 rule on one node (the same variable or dimension) tie, and any re-save flips
-the overlap. Arity sits above pinned count: the two-term
+the overlap. Number of terms ranks above pinned count: the two-term
 `[A in any, Date in any]` outranks the one-term `[A = "x"]` even though the
 latter pins more. Decision: never leave two overlapping same-node rules at
 equal specificity; make one strictly more specific — pin an extra axis, or

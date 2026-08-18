@@ -1,19 +1,17 @@
-# Table blocks: views into the space
+# Table blocks
 
-How a grid of numbers is declared. Builds on the axioms in SKILL.md and the
-vocabulary of references/01-the-dimensional-universe.md (segment, grain,
-item). Recipes are in references/08-recipes.md; the laws about what breaks
-are in references/06-validity.md.
+This file explains how a table declares its numbers. It builds on `SKILL.md`
+and references/01-the-dimensional-universe.md. See references/08-recipes.md
+for examples and references/06-validity.md for invalid shapes.
 
 ## 3.1 A block is a view definition
 
-A table block stores no data. Its config is two ordered trees of **axes**,
+A table block stores no data. Its config has two ordered **axis** trees,
 one for rows and one for columns, plus block-level settings: name, date
 range, granularity (monthly vs quarterly), and comparison state.
-An axis is one "break down by \_\_\_" rule carrying one entry. The engine
-turns each rule into a fan-out: one row (or column) per dimension item, or a
-single row for a variable. Nesting composes fan-outs. Everything the table
-shows is derived from config + evaluation; nothing is stored per cell.
+Each axis means “break down by \_\_\_” and names one entry. The engine makes one
+row or column per dimension item, or one row for a variable. Nested axes add
+breakdowns. The config and formulas produce every cell; cells store no data.
 
 Read a config the way you would read its title: the variable plus the chain of
 dimensions under it is the table's sentence, "Revenue by Region by Product,
@@ -25,7 +23,7 @@ over Months". Titles are generated in exactly that shape.
   carries all the knobs below.
 - **Formula axis** is the formula lane: a column (or row) whose cells show
   the formula expressions behind the crossing variable, for editing. Every
-  persisted table gets one seeded automatically. A table whose only axis is
+  saved table gets one seeded automatically. A table whose only axis is
   the formula lane still counts as empty. It computes nothing.
 - **Freeform** axes exist in the schema; never author one. The only live
   freeform is the virtual "comparison" placeholder, and the renderer
@@ -56,7 +54,7 @@ from firing.
 Sibling order in the config arrays is the primary display order, ahead of
 any item sort.
 
-## 3.4 Nesting, and what pivoting really is
+## 3.4 Nesting and pivoting
 
 Nesting one axis under another multiplies fan-outs and refines the grain.
 Rows `Revenue > Region > Product` produce: one Revenue total row, one row per
@@ -64,16 +62,14 @@ region, one row per (region, product). Each level's cells are the variable
 evaluated at that level's grain, which is why parents are recomputed
 aggregates rather than sums of their visible children (references/02-formulas.md §2.4).
 
-**Pivoting an axis (rows to columns or back) changes placement and nothing
-else.** The entry, filter, sort, granularity, children, and pinning all
+**Pivoting an axis changes only its placement.** Its entry, filter, sort,
+granularity, children, and pinning all
 travel with it. The grain of every cell is the union of its row path and
 column path dimensions, and unions do not care which side a dimension came
 from. "Revenue by Region over Months" and "Revenue by Months over Region"
-contain identical numbers, transposed. To flip the whole table, swap its
-complete root trees: `rows: Revenue > Region; cols: Date` becomes `rows:
-Date; cols: Revenue > Region`. Change the row/column type of every moved node,
-preserve each subtree's hierarchy and knobs, and keep every child `parentId`
-anchored to its parent in that same subtree. Pivot moves are always safe.
+contain identical numbers, transposed. To flip the whole table, say
+`transpose: true` on the view: it swaps which half renders as rows and
+changes nothing else. Pivot moves are always safe.
 
 There is no per-move edit vocabulary. A structural edit — including a pivot —
 restates the whole view: `edit_model_views` `change.configure_table`, naming the
@@ -84,8 +80,7 @@ restates; you maintain neither by hand.
 
 ## 3.5 The drill-in family
 
-One user verb ("drill in"), several mechanisms. Knowing which is which
-matters when editing configs:
+“Drill in” can mean several things:
 
 1. **Drill in by dimension** adds a child property axis under a node. The
    items appear as nested rows. When drilling an axis that already has
@@ -116,25 +111,25 @@ listing declines rather than widen past its cell, and a listing cut at the
 row cap reports the truncation. It works single-scenario only and cannot
 combine with comparisons.
 
-What the first four share: they change the grain the cells beneath them are
-evaluated at. That is a modeling consequence, not a display one — the
+The first four change the grain below them. This changes the model result, not
+just the display. The
 variable needs a formula that reaches the new grain, or those rows fall to
 the floor and render zeros under a parent that still looks right
 (references/09-the-layer-model.md). Decide the drill-ins a block will carry
 before writing its formulas, not after.
 
-## 3.6 Cells, and the variable placement law
+## 3.6 Cells and variable placement
 
 A cell is the crossing of one row path and one column path: the variable
 evaluated at the union of their segments — or, where the value slot holds a
 value-axis mapping (a bare dimension, references/11-block-grammar.md §11.1),
-that dimension's item for the crossing. Hence the law ("the variable lives on
+that dimension's item for the crossing. This gives the rule ("the variable lives on
 exactly one side" in SKILL.md): along any crossing there must be exactly one
 variable or none, and it cannot sit on both sides. One variable per crossing
 means one empty slot in every cell address, which is how results decode back
 into "variable + segments".
 
-Corollaries: dimension-only tables are legal item listings with no value
+As a result, dimension-only tables are legal item listings with no value
 cells. Variable-under-variable nesting, or variables on both sides, saves fine and
 fails at calculation (references/06-validity.md). The engine returns one
 value per cell; a config that makes a cell ambiguous (the same dimension
@@ -164,7 +159,7 @@ the engine.
 
 ## 3.8 What a table block cannot express
 
-Requests will ask for these; the answer is a workaround, not a config field:
+These requests need a workaround because no config field supports them:
 
 - **No top-N or limit-by-value.** Item restriction is only the inclusion
   filter (explicit list) or drill-in pinning.
@@ -185,11 +180,10 @@ stale.
 ## 3.8b Ranked reads
 
 Ranked questions are queries, not blocks. The engine cannot sort a block by
-value (no sort-by-cell-value, above), so "top N customers", "bottom 5 by margin", or
-"which items drove the drop" must never become a rendered table or an
-enumeration in chat. Use `inspect_model_views` `ask.rank`: a view plus a
+value. For “top N customers,” “bottom 5 by margin,” or “which items drove the
+drop,” use `inspect_model_views` `ask.rank`: a view plus a
 typed ranking naming the dimension to rank, `n`, and the key. Ranking
-runs server-side, returns only the ranked rows, and persists nothing;
+runs server-side, returns only the ranked rows, and saves nothing;
 n ≤ 50. The keys:
 
 - `by: value` ranks by the variable at the window grain.
@@ -213,11 +207,11 @@ it.
 
 ## 3.9 The block signature
 
-A block has one meaning and several renderings: the sentence you say
-("Gross Margin % by Region and Product, monthly over 2026"), the **view**,
-and the config JSON. The view is the rendering the tools speak;
+A block has one meaning and two forms: the sentence you say
+("Gross Margin % by Region and Product, monthly over 2026") and the
+**view**. The view is the rendering the tools speak;
 references/11-block-grammar.md defines it, and the breakdown spelling is
-normative in [[build-model:references/grammar-reference.md]], the
+defined by [[build-model:references/grammar-reference.md]], the
 generated grammar reference.
 Reads return its text as `signature` and its write shape as `view`; the
 block survey and the update echoes pair it with a `signature_status`
@@ -225,7 +219,7 @@ block survey and the update echoes pair it with a `signature_status`
 it cannot describe, references/12-editing-blocks.md §12.6). The write
 tools accept the same `view` back. They are their own validation, so call
 them directly: a view that does not check returns its problems and
-persists nothing; there is no separate validator to run first. Design and
+saves nothing; there is no separate validator to run first. Design and
 reuse conversations happen in this form, not JSON. Derive it by hand only
 when no tool has rendered it for you.
 
@@ -234,10 +228,10 @@ column path dimensions. Two blocks with the same signature up to row/column
 placement contain the same numbers (the pivot law), so compare signatures
 before building anything new.
 
-## 3.10 Reading incrementally: coarse first, then descend
+## 3.10 Read large tables in stages
 
-`inspect_model_views` returns an aligned text grid with windowing knobs. Never
-read a big block in one call. Read coarse first, then descend: take the
+`inspect_model_views` returns an aligned text grid with window controls. Do not
+read a large block in one call. Start coarse, then descend: take the
 default window (top of the hierarchy, one level down) and read the footers.
 The footers tell you the shape (`rows 4/4 at depth 1 · Engineering has 6
 children, Marketing 4`), which is usually the answer to "what is in this
@@ -320,7 +314,12 @@ answers with a drop-after-or-pin steer, not data).
 
 The grid itself: hierarchy is indentation, values are raw engine numbers,
 `·` is no data (blank is not zero, references/02-formulas.md), `#ERR` cells are detailed in an
-errors section, and the refs section maps row paths and `c1..cN` column ids
-to `runway:` URIs for follow-up tool calls. When a footer says a fan is
+errors section, and the refs section spells each row's full path — what `scope`
+and `after` take — beside the `runway:` URI of each `c1..cN` column. A row
+carries a URI there only on a page whose `axes` legend cannot address it; the
+legend names the property at each step of a path, and prints whether or not the
+refs do. The ids inside a URI path are axis NODE ids, not property ids, so never
+lift one out and use it as a variable. A footer that says `drill in:` is reporting
+rows whose values live below the depth you read, not an empty table. When a fan is
 large (`fans out to 250 children`), that is a ranked-read question for
 `inspect_model_views` `ask.rank` (§3.8b), not something to page through.

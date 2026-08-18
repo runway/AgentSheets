@@ -1,12 +1,12 @@
-# Nightingale Chart Guide
+# Nightingale chart
 
-## Chart options shape
+## Options
 
-Nightingale is an enterprise series the injected `Chart` supports out of the box:
+The injected `Chart` supports the enterprise Nightingale series:
 
 ```jsx
 function Block({ data }) {
-  const ds = data.variables || { rows: [], series: [] }; // "variables" = the exact name YOU declared in datasets
+  const ds = data.variables || { rows: [], series: [] }; // Use the exact name declared in datasets.
   return (
     <Chart
       options={{

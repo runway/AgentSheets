@@ -1,13 +1,13 @@
-# Bar Chart Guide
+# Bar chart
 
-## Chart options shape
+## Options
 
-Dataset rows always expose the x values under `date` — keep `xKey: "date"`
-even when the axis reads as categories (e.g. quarters):
+Dataset rows put x values under `date`. Keep `xKey: "date"` even when the
+axis shows categories such as quarters:
 
 ```jsx
 function Block({ data }) {
-  const ds = data.revenue || { rows: [], series: [] }; // "revenue" = the name YOU declared in datasets
+  const ds = data.revenue || { rows: [], series: [] }; // Use the name declared in datasets.
   return (
     <Chart
       options={{
@@ -19,8 +19,8 @@ function Block({ data }) {
 }
 ```
 
-For a multi-variable dataset, derive the bars from `ds.series` (rows are keyed
-by `series[i].key`, not `value`):
+For several variables, derive bars from `ds.series`. Those rows use
+`series[i].key`, not `value`:
 
 ```jsx
 series: ds.series.map((s) => ({
@@ -31,16 +31,14 @@ series: ds.series.map((s) => ({
 })),
 ```
 
-Pick the comparison buckets with the dataset's
-`table_config.settings.dateGranularity` (e.g. QUARTER for "by quarter"); for a
-single-point categorical comparison use a narrow
-`table_config.settings.dateRange` instead of fine granularity.
+Set the comparison buckets with the dataset's `window` granularity, such as
+`QUARTER` for “by quarter.” For one categorical snapshot, use a narrow window.
 
-## Contract notes
+## Rules
 
-- One monthly multi-series dataset can represent a variable broken out by category over time.
-- Stacked bars use the same dataset shape when composition within each bucket is required.
+- One monthly multi-series dataset can show a category breakdown over time.
+- Stacked bars use the same data shape to show each bucket's composition.
 
 ## Common mistakes
 
-- Renaming `xKey` to something other than `date` — rows don't carry other x fields
+- Using an `xKey` other than `date`. Rows have no other x field.

@@ -1,19 +1,15 @@
 # Editing blocks in place
 
-Editing an existing table is first-class, not a lesser case of building.
-This file covers what to do when the table already exists and the user
-wants it different. It builds on references/03-table-blocks.md (the axis
-model and the signature) and the method in
+Use this file when changing an existing table. It builds on the axis model and
+signature in references/03-table-blocks.md and the method in
 references/07-modeling-method.md.
 
-## 12.1 An acknowledged edit is a write
+## 12.1 An edit requires a write
 
-The one law this file exists for: **saying you changed a table does not
-change it.** "Filtered to East" is an `edit_model_views` call. "Narrowed
-the window to H1" and "switched it to quarterly" are `edit_table_blocks`
-calls. Until the call returns applied, nothing happened. The failure
-mode to guard against is agreeing with the request, restating the
-table, and never writing. After every edit, read the echo in the tool
+**Saying you changed a table does not change it.** “Filtered to East” requires
+an `edit_model_views` call. “Narrowed the window to H1” and “switched it to
+quarterly” require `edit_table_blocks`. Until the call returns `applied`,
+nothing changed. After every edit, read the echo in the tool
 result — the signature for a structural edit, the `readback` for a
 presentation edit — and confirm the changed part actually changed. That
 echo is the proof, not your intention.
@@ -40,13 +36,12 @@ exception: orientation. An update omitting `transpose` flips a transposed
 non-mapping block back (references/11-block-grammar.md §11.3); restate
 `transpose: true` on such a block's updates. Anything
 the reconcile had to drop comes back as a warning. A view that fails
-validation returns its problems and persists nothing: the writes validate
-themselves, so call directly; reach for `dry_run` when a whole-config
-replace is risky (SKILL.md axiom 17) — and when the config checks matter:
-a view write never surfaces config-check warnings (the missing time
-column and its kin), so a dry run is the only way to see them.
+validation returns its problems and saves nothing: the writes validate
+themselves, so call directly; reach for `dry_run` when an update is risky
+enough to check first (SKILL.md axiom 17). A create reports the config
+checks itself, as advisory warnings on the applied item.
 
-The method is always the same three moves:
+Use three steps:
 
 1. Start from the block's current `view` (`inspect_table_blocks` `ask.list`
    — the calculated data read does not carry one). Never write an
@@ -128,7 +123,7 @@ a saved block only when the narrow window is the ask.
 
 "Show the change versus last month/quarter/year", MoM/QoQ/YoY, "versus
 budget" — these are block edits, not questions to answer in chat. A chat
-answer scrolls away. The block persists and keeps showing the
+answer scrolls away. The block remains and keeps showing the
 comparison. What a block is shown against is presentation, so it is one
 `edit_table_blocks` call and the table itself is never restated. On a
 quarterly table, "the change versus the quarter before it" is:
@@ -180,12 +175,9 @@ A `signature_status` of `partial (…)` names structure only the config
 rendering can touch — generated axes, role overrides, per-item
 overrides, multi-entry axes, drill-in paths beyond a branch condition,
 the formula lane (references/03-table-blocks.md §3.9). A view update
-against those rejects with guidance rather than silently dropping user
-work. Take the hint and edit through `table_config` (the
-whole-config replace with caller-threaded node ids). Read that config
-with `inspect_table_blocks` `ask.config`, which returns the block's own ids
-rather than fresh ones, and — since this is exactly the risky
-whole-config replace — check the edit with `dry_run`.
+against those rejects with guidance rather than silently dropping user work.
+There is no raw-config path to fall back to: say what the view cannot express
+and stop, rather than rebuilding the block by hand.
 
 ## 12.7 Formatting: the same styles users set by hand
 
