@@ -192,8 +192,14 @@ names are not keys your code sees.
 A save proves that the stored source compiles and that each dataset layout resolves against the
 model. The readback grid shows the first rows of each dataset, blank and error cells included.
 Rendering evidence comes from `validate: true` on the write or an independent
-`validate_code_blocks` call, and belongs to the reported saved revision and to the one frame width
-its `observed` field names. Use that evidence for the changed block; its warnings can reveal a
+`validate_code_blocks` call, and belongs to the reported saved revision and to the frame width
+its `observed` field names. The light render is also laid out at 360, 600, 760, 900, 1100, and
+1400 px wide. A warning such as "At 760 and 900 px wide, text overlaps: td "Acme Ltd" at source
+212:8 and td "INV-17" at source 213:8" names each width, element, and source position where text
+runs into other text or spills out of its box. Fix it before handing the block over: stack columns
+with Grid `minColumnWidth`, let text wrap, or give a wide table a deliberate horizontal scroll with
+columns that keep their width. Grid already stacks a column whose content is wider than the column,
+but it cannot shrink that content. Use that evidence for the changed block; its warnings can reveal a
 wrong variable, breakdown, filter, window, or chart option, and they name the rows where a numeric
 series in the whole dataset is blank or any series holds an error code such as `#DIV/0!`. The
 block receives null in each of those cells. Its `plotted` list holds the values each chart was
@@ -205,8 +211,8 @@ rendering untested; a failed check leaves the edit saved.
 
 Text diagnostics settle ordinary checks. Request a `visual_review` of one changed block when seeing
 the settled result would change your next decision: a dense dashboard where clipping, overlap,
-contrast, or hierarchy matters. It shows the same frame width, so hover, interaction, and layout
-at other widths stay unproven.
+contrast, or hierarchy matters. It shows the 1200 px frame, so hover and interaction stay unproven, and other widths are
+covered only by the width warnings.
 
 Before saving, make one deliberate craft pass on the rendered composition: the eye's entry point,
 scan path, grouping, numeric alignment, active and hover states, empty and error behavior, long
