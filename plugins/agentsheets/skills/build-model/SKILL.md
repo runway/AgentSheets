@@ -5,11 +5,9 @@ description: Build, change, or diagnose a model and model the business in it. Us
 
 # Build the model
 
-A workspace has one model, and every table is a view of it. This skill starts with the picture of
-how the engine computes a model, told on one running example, then builds that example as the
-calls that make it, then the engine's detail for imported records, mappings, and which rule fills a
-cell. The rest is the business the model simulates: what it earns, what it costs, who does the
-work, where cash lands, and the statements that read from all of it.
+A workspace has one model, and every table is a view of it. This skill starts with the picture of how the engine computes a model, told on one running example, then builds that example as the calls that make it, then the
+engine's detail for imported records, mappings, and which rule fills a cell. The rest is the business the model simulates: what it earns, what it costs, who does the work, where cash lands, and the statements that read
+from all of it.
 
 ## The model and its views
 
@@ -18,16 +16,9 @@ Ordering, formatting, and the breakdown a table shows are the view, owned by tha
 an existing table keeps its block identity and edits it in place; a copy on another page is a
 separate block with the original left alone.
 
-A readable name identifies an object only together with its identity: two variables can carry one
-name, and the token an inspection or receipt prints, such as `Headcount#7d3`, names exactly one.
-A plain name that matches an existing variable shows it and adds only where it holds nothing, and a save that would replace what it holds is refused whole;
-a row that carries its token writes it, and that rule replaces the one every table reads. The existing object is the one to reuse when it is the one
-the request means; a requested report keeps the names the request gives its variables, even when an
-unrelated object already has such a name (`new: true` on the create), and keeps the shape the
-request spells out: breakdown dimensions in the order listed, each listed field a column. A
-different name or shape is a different deliverable. Saved data, research, supplied numbers, and
-disclosed assumptions all build, and the missing variables and dimensions the work needs are yours
-to create.
+A readable name identifies an object only together with its identity: two variables can carry one name, and the token an inspection or receipt prints, such as `Headcount#7d3`, names exactly one. A plain name that matches an existing variable shows it and adds only where it holds nothing, and a save that would replace what it holds is refused whole; a row that carries its token writes it, and that rule
+replaces the one every table reads. The existing object is the one to reuse when it is the one the request means; a requested report keeps the names the request gives its variables, even when an unrelated object already has such a name (`new: true` on the create), and keeps the shape the request spells out: breakdown dimensions in the order listed, each listed field a column. A different name or shape is a
+different deliverable. Saved data, research, supplied numbers, and disclosed assumptions all build, and the missing variables and dimensions the work needs are yours to create.
 
 Variables and dimensions stay on at least one table in each scenario. Updates and reshapes remove
 occurrences when another saved table shows the object. Table and page deletion keep objects shown
@@ -488,6 +479,15 @@ source for the members whose state changes inside the window, and rows the sourc
 are the only evidence gap to report. The `variable` and `dimension` reads list what depends on an
 object; a delete without `force` is refused while anything does and deletes at once when nothing
 does; `force` is for a deletion the person asked for after hearing them. An edit to past periods is said so.
+
+Build with these rules; check them when calculations slow or time out:
+
+- **Use only necessary time detail.** Prefer monthly or yearly source queries and formulas when finer detail cannot change results.
+- **Use general formulas.** Use the cell's system Date or dimension item instead of copies with hardcoded years or items.
+- **Share expensive expressions.** Consider helper variables for repeated calculations; measure whether they improve performance.
+- **Use source data.** Read available amounts, dates, and items instead of hardcoding values or manual lists. Keep editable assumptions where needed.
+
+Preserve exceptions, event timing, historical observations, dimensions, and Actuals/Forecast coverage. Verify repairs with the same read: unchanged values, missingness, and errors; improved calculation time.
 
 ## What a model of the business is
 
