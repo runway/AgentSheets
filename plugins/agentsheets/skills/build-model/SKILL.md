@@ -363,15 +363,15 @@ business concept share one reporting dimension, each mapped in with its own keys
 are dimensions, and a mapping rule's condition names every key, each term comparing one key's value
 or leaving it open with `in any`.
 
-A mapping is how a statement gets company-specific lines. A one-off visual grouping can stay as
-table nesting; renaming a user-created item is an item edit; making several imported labels read as
-one item is a mapping. A written mapping carries a catch-all whose stated meaning covers the
-unmatched items, and the receipt's `row_membership` is the write's effect on other reports. A
-mapping view, source keys on rows and mapped attributes as columns, gives a new classification
-dimension a visible place to edit; mapping views are timeless. A blank mapping cell is a source item that
-maps nowhere and stays visible; a reporting category with no activity is right when nothing happened
-and wrong when the mapping never sends anything there, and only the source rows say which. A filter
-names an exact member: the source code `DATA` and the mapped label `Data` are different values.
+A mapping is how a statement gets company-specific lines. A one-off visual grouping can stay as table
+nesting; renaming a user-created item is an item edit; making several imported labels read as one
+item is a mapping. A written mapping carries a catch-all whose stated meaning covers the unmatched
+items, and the receipt's `row_membership` is the write's effect on other reports. A timeless mapping
+view, source keys on rows and mapped attributes as columns, is where a person edits a classification
+and the home of each dimension a map creates. A blank mapping cell is a source item that maps nowhere
+and stays visible; a reporting category with no activity is right when nothing happened and wrong
+when the mapping never sends anything there, and only the source rows say which. A filter names an
+exact member: the source code `DATA` and the mapped label `Data` are different values.
 
 A mapping reads in formulas two ways. For an imported measure, whose source rows carry the mapping's
 keys, a mapped dimension in a predicate groups those rows through the mapping:
@@ -563,9 +563,9 @@ something different in each state. A won amount is a booking and belongs in the 
 closed. An open amount weighted by its probability is an expectation and belongs in the month the
 deal is expected to close. A lost amount is its own measure when someone asks. So bookings, open
 pipeline, and lost deals are three quantities, each reading the deals in its state; a closed deal
-contributes nothing to open pipeline. A deal count counts distinct deals, and deals without an
-amount are in the counts and out of the totals. A pipeline model is a time series of bookings and
-pipeline with the deals beneath it, one row per deal with its stage, owner, amount, and dates, so
+contributes nothing to open pipeline. A deal count counts each deal once, in the forms under `count`
+for a total and for a deal's row; deals without an amount are in the counts and out of the totals.
+A pipeline model is a time series of bookings and pipeline with the deals beneath it, one row per deal with its stage, owner, amount, and dates, so
 the register reconciles to the totals because it is the same deals; weighted open pipeline is the
 two-rule drill-down under How a rule reaches a cell. The source's real classifications stay on the
 deals, with stage first for open pipeline, and measures carry business names:
@@ -943,7 +943,7 @@ Use the preferred name. Accepted aliases still parse in stored formulas.
 - `min(value: number | date, value2...: number) -> number | date | null`: Takes 1 to 10 arguments. Empty input: null. One date or datetime argument returns the earliest; several arguments must be numbers.
 - `max(value: number | date, value2...: number) -> number | date | null`: Takes 1 to 10 arguments. Empty input: null. One date or datetime argument returns the latest; several arguments must be numbers.
 - `average(value: number, value2...: number) -> number | null`: Takes 1 to 10 arguments. Empty input: null. *(accepted: `avg`)*
-- `count(value: any, value2...: any) -> number`: Takes 1 to 10 arguments. Counts non-empty values in one or more expressions. It works like Excel COUNTA, not Excel COUNT.
+- `count(value: any, value2...: any) -> number`: Takes 1 to 10 arguments. Counts non-empty values in one or more expressions. It works like Excel COUNTA, not Excel COUNT. A bracketed read keeps each dimension it filters on, and its condition on a dimension takes the place of the row's item of that dimension. So `count(Deal[Region in {"East", "West"}])` counts each deal once for every one of those Region items its records carry, and on a deal's row it counts that deal's items among them. `count(Deal$[Deal where count(Deal[Deal = Deal, Region in {"East", "West"}]) > 0])` counts each deal once, and its condition on Deal gives every deal's row that same total. On a deal's row, `if(count(Deal[Region in {"East", "West"}]) > 0, 1, 0)` is 1 for a deal with records in East or West and 0 for any other.
 - `first(value: T, source2...: T) -> T | null`: Returns the first nonnull value in series order. Multiple arguments must be direct source columns or property references; their earliest nonnull source row wins. Dated rows take precedence over undated sources; earlier arguments win equal-date ties and ties among undated sources.
 - `last(value: T, source2...: T) -> T | null`: Returns the last nonnull value in series order. Multiple arguments must be direct source columns or property references; their latest nonnull source row wins. Dated rows take precedence over undated sources; later arguments win equal-date ties and ties among undated sources.
 - `stdev(value: number, value2...: number) -> number | null`: Takes 1 to 10 arguments. Returns sample standard deviation (ddof=1) pooled across one or more numeric expressions, or null with fewer than two values. *(accepted: `stddev`)*
