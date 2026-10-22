@@ -530,11 +530,12 @@ expansion per period are calculated from those fields, so an operator extends th
 adding a row. A record the business does not yet have, a planned hire or an expected customer, is
 a row like the rest, planned by its start date and editable fields until evidence makes it actual.
 
-When no roster or customer list exists, placeholder records seed the tables and reconcile to the
-totals the person gave: one placeholder employee per row with an ID, department, role, start date,
-and pay; customers as cohort records, one per combination of the dimensions the business sells into.
-Each is named the way the company names its own people and customers, by role or segment, as in a
-`Team roster` holding `Software Engineer 2`, with its scope and currency.
+Records start from the most direct evidence: connected data, a file, the person's words, then public
+sources tied to the company, such as its team and customer pages, press, and profiles naming it as
+the current employer. A person or customer a source shows as current is a record under the real
+name, holding each field the source shows. Estimates fill the rest, reconciled to the person's
+totals: pay as a rate per role that each row reads, role-named records such as `Software Engineer 2`
+for unnamed people, and cohorts for unnamed customers, one per combination of dimensions sold into.
 
 ## Controls and pages
 
@@ -611,7 +612,7 @@ A bottom-up plan is the people: active employees, confirmed departures, committe
 hiring, and disclosed attrition, each planned worker with a stable identity and a department. A
 narrower plan can hold editable role counts, costs, and dates with no HR connection. A demand-driven
 plan separates required headcount, committed headcount, and the gap, paying committed workers and
-hypothetical hires alike while keeping them apart. Capacity follows available working time and
+planned hires alike while keeping them apart. Capacity follows available working time and
 allocations while payroll follows paid employment, and the two can differ in timing.
 
 ## Where cash lands
@@ -621,7 +622,7 @@ spending, debt, and financing follow commitments and disclosed assumptions, with
 and material customer concentration kept. A projected balance is an opening balance plus dated
 movements; when opening cash is unknown, an editable opening assumption stands in, disclosed, and
 the runway that follows is conditional on it. Negative cash stays visible, and committed financing
-stays apart from a hypothetical raise.
+stays apart from a planned raise.
 
 A cash review answers how long the current plan can fund the business and which decisions could
 change that answer. It establishes the cash balance's date, currency, restrictions, and the
