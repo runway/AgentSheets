@@ -357,8 +357,8 @@ several department vocabularies to one reporting Department. The classification 
 structure: the mapping holds which accounts make up each statement line, a row's formula names the
 line, and the person changes the classification once, in the mapping, with every row that reads it
 following. Mapping changes are reversible edits with historical effects worth explaining. Source
-columns supply dimensions and variables; manual dimensions carry disclosed planning inputs, and a
-hypothetical record can have its own labeled planning identity. Several sources describing one
+columns supply dimensions and variables; manual dimensions carry planning inputs, and a planned
+record has its own identity until a source record replaces it. Several sources describing one
 business concept share one reporting dimension, each mapped in with its own keys. A lookup's keys
 are dimensions, and a mapping rule's condition names every key, each term comparing one key's value
 or leaving it open with `in any`.
@@ -510,8 +510,7 @@ When several estimates are defensible, recommend one, use it, and say what the a
 change. A modeled goal is an editable assumption; only the company can make it a commitment. A
 value that carries a unit is segmented by the dimension that carries it, pay by its currency, before
 any total, so the top of a payroll broken down by currency is a converted figure at a stated rate or
-the currency rows themselves. Definitions, input sources, assumptions, and open questions live
-beside the saved model.
+the currency rows themselves. Definitions live beside the saved model.
 
 ## The coordinates of the business
 
@@ -528,19 +527,19 @@ The people, customers, and deals of a business are records: a table keyed by a s
 fields the facts a formula needs, with time series that read those fields. A customer table keyed
 by customer carries plan, segment, region, start date, end date, and price, and revenue, churn, and
 expansion per period are calculated from those fields, so an operator extends the business by
-adding a row. A record the business does not yet have, a planned hire or an expected customer,
-carries a planning label and its own editable fields until evidence makes it actual.
+adding a row. A record the business does not yet have, a planned hire or an expected customer, is
+a row like the rest, planned by its start date and editable fields until evidence makes it actual.
 
 When no roster or customer list exists, placeholder records seed the tables and reconcile to the
 totals the person gave: one placeholder employee per row with an ID, department, role, start date,
 and pay; customers as cohort records, one per combination of the dimensions the business sells into.
-A saved row shows no origin and is read apart from the chat, so a placeholder's names say what it
-is, as in `Placeholder roster` and `Placeholder hire 1`, beside its basis, scope, and currency.
+Each is named the way the company names its own people and customers, by role or segment, as in a
+`Team roster` holding `Software Engineer 2`, with its scope and currency.
 
 ## Controls and pages
 
 Shared inputs live together on one page the operator reads top to bottom: growth, pricing, churn,
-hiring pace, unit costs, payment terms, each with its basis beside it. A control sits at the grain
+hiring pace, unit costs, payment terms. A control sits at the grain
 where someone would change it, a churn rate per plan, a hiring start per role, and within a range
 that makes business sense to move. Every calculated output traces to these controls, so moving one
 changes the whole business; the forecast simulator that closes a build binds to this page, and the
@@ -554,7 +553,7 @@ customers, additions, losses, ending customers, and their revenue; growth and ch
 assumptions, and the customer movements are their calculated effect. Subscription cohorts reconcile
 to recurring revenue, and a zero-growth or zero-churn assumption is disclosed as one. Transactions
 and marketplaces follow their unit economics. Seasonality is evidence from the company's own
-history or a labeled assumption. Contracts, projects, and grants keep their real terms under the
+history or an assumption. Contracts, projects, and grants keep their real terms under the
 company's recognition policy, so unsigned or conditional revenue stays contingent. Bookings,
 recognized revenue, billing, and cash are four events with four timings.
 

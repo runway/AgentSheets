@@ -40,7 +40,7 @@ side, with whatever history makes the difference legible. Its initial state is t
 adjustments carry labels and can reset. Inside a preview, history and the financial model stay
 read-only: an editable mark changes a local future-period preview, and nothing saves unless the
 block saves it with `emit`. Editable assumptions and recorded values live in native tables;
-starting inputs come from dataset values or disclosed assumptions, labeled with their basis.
+starting inputs come from dataset values or editable assumptions.
 
 All new page visuals are Canvas blocks: sandboxed React components connected to live model values. A
 requested dashboard or standalone HTML view is a page of Canvas blocks. Native tables belong to the
