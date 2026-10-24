@@ -22,7 +22,7 @@ tool definitions, refresh its tool catalog or start a fresh conversation.
 | Skill | When it applies |
 | ----- | --------------- |
 | `build-model` | Build, change, or diagnose a model and model the business in it. Use for variables, formulas, dimensions, mappings, time, rollups, table layouts, comparisons, formatting, and unexpected results; for forecasts, budgets, plans, and scenarios; for headcount, payroll, and rosters; for bookings, pipeline, and deal registers; and for statements, cash and runway, budget versus actuals, and unusual results. |
-| `build-visualizations` | What a page visual is for and how Canvas blocks connect to live model values: choosing the visual, the dataset contract, templates, and how a saved visual is checked and changed. |
+| `build-visualizations` | Build model-connected Canvas visualizations and interactive applications. Use when choosing a business representation, making timing or other choices directly manipulable, binding datasets, or reviewing the rendered result. |
 | `import-model` | Rebuilding someone else's model — a workbook, an export, a rendered document — as a native cfo.ai model that keeps its meaning. Use when asked to import, migrate, rebuild, or recreate a model from source files. |
 
 ## About this repository

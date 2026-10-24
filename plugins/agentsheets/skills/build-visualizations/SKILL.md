@@ -1,61 +1,74 @@
 ---
 name: build-visualizations
-description: "What a page visual is for and how Canvas blocks connect to live model values: choosing the visual, the dataset contract, templates, and how a saved visual is checked and changed."
+description: Build model-connected Canvas visualizations and interactive applications. Use when choosing a business representation, making timing or other choices directly manipulable, binding datasets, or reviewing the rendered result.
 ---
 
 # Build visualizations
 
-A visualization explains a relationship that is harder to see in prose or a table. It earns its
-place one of two ways: an **explanatory** visual makes evidence easier to compare; a **simulation**
-shows how a controllable assumption changes a modeled outcome.
+A Canvas application is a working representation of a business decision. The financial model
+describes what happens; the application gives the person a useful way to act on that model and
+understand the consequences. An explanatory visual makes evidence easier to compare. A simulation
+makes a business choice directly manipulable.
 
-The question and the relationships the model supports decide which one, whether interaction helps,
-and which input is the meaningful one to move. The smallest clear, presentation-ready composition
-wins: a person understands the answer, the current state, and the useful next interaction within
-five seconds.
+The design bar combines Tufte's clarity of quantitative evidence with Bret Victor's immediacy of
+action and consequence. The shared product theme supplies the visual language.
 
-Before choosing a form, answer five questions internally: what relationship must become visible
-(comparison, change, composition, distribution, correlation, or flow); how many variables matter;
-whether the domain is ordered time or categories; how many marks must fit; and whether the person
-needs an executive glance, analytical exploration, or operational monitoring. The request and the
-model already hold this evidence. Executive views lead with a few outcomes and trends. Explorers
-expose filters, cross-focus, and exact detail. Operational views prioritize exceptions, thresholds,
-owners, and what needs attention now.
+Its form comes from the objects and relationships in the business. A hire begins at a date and
+creates recurring cost and capacity. A contract has a service period, billing terms, and
+collections. A scarce resource is divided between competing uses. The model determines which
+quantities are choices, which are consequences, and what connects them.
 
-Also decide whether the block is communicating a known message or helping the person process a
-population. A message view leads with one memorable conclusion and its proof. A processing view
-supports scanning, sorting, comparison, and anomaly finding; it often starts with a compact table,
-a semi-graphic table with sparklines or in-cell bars, or aligned small multiples rather than a row
-of KPI cards. Match the form to the work.
+Timing is often a particularly revealing choice. Moving a consequential event lets the person see
+how a familiar scheduling decision changes several parts of the forecast together. When timing
+matters, give the event a visible place in time and make that position adjustable. Its dependencies
+retain their business meaning: moving a collection changes cash, while moving a service start can
+change when revenue is earned. A point changes date; a span may move while preserving duration or
+have an editable end when duration is itself a choice.
 
-Match the visual channel to the data. Position and length carry quantities and ordered comparison;
-hue identifies categories, series, and states; luminance or a perceptually ordered scale carries
-order when order itself is the meaning. A critical distinction has a second carrier besides color.
-The strongest positional channels go to the most important variables. When one plot cannot keep
-readable baselines and consistent scales, a table or aligned small multiples with shared scales is
-the clearer form; several groups that need the same comparison keep one encoding across the set.
+The business object is also its control. A date is the position of an event; an allocation is a
+boundary between uses; an editable amount belongs to the quantity it represents. The gesture
+follows that meaning. Exact entry and keyboard operation express the same choice with precision.
 
-A simulation shows a baseline, one input the person can move, and the outcome that follows, side by
-side, with whatever history makes the difference legible. Its initial state is the baseline;
-adjustments carry labels and can reset. Inside a preview, history and the financial model stay
-read-only: an editable mark changes a local future-period preview, and nothing saves unless the
-block saves it with `emit`. Editable assumptions and recorded values live in native tables;
-starting inputs come from dataset values or editable assumptions.
+The application is an annotated figure the person can manipulate. Its marks are the business
+objects, its geometry explains their relationships, and its annotations give the current answer.
+The first useful action and its financial consequence occupy the opening view together. A cash
+minimum is labelled at the low point; a changed event carries its date and difference; selecting
+that event opens precise editing beside it. Overview, action, comparison, and detail have a common
+visual home.
 
-All new page visuals are Canvas blocks: sandboxed React components connected to live model values. A
-requested dashboard or standalone HTML view is a page of Canvas blocks. Native tables belong to the
-build-model manual.
+In a time-based figure, the same horizontal position means the same period. Event marks sit on or
+beside the financial paths they affect. The person can hold an event, move it, and watch the
+response in that picture. The saved position and original path remain visible. Constraints,
+plateaus, and delays appear where they affect the choice. Related marks retain their identity
+across views. This relationship stays intact as the width changes.
 
-Canvas is a product surface. Begin as an extension of the page, not as a card or website inside it.
-The page and Canvas host already establish the outer boundary and breathing room, so keep the
-component root transparent and unbordered, without a `Card` wrapper or duplicate outer padding. Add
-layout directly as the content needs it. Add a surface, border, or padded container only when it
-expresses a distinct group, state, elevation, or interactive boundary; do not wrap the block and
-then wrap each section again by default.
+The question determines the information form. A known conclusion needs its convincing proof.
+Exploring a population benefits from comparison, focus, and exact detail; tables with embedded
+marks and aligned small multiples can make dense evidence readable. Position and length carry
+quantities, hue carries identity, and an ordered lightness scale carries magnitude. Comparable
+views retain consistent units, scales, and periods. Labels belong to the marks they explain.
+Each important distinction has a readable cue in its position, shape, line style, or label as well
+as color.
 
-A visual inherits the design system rather than restyling it, and the same business object keeps the
-same color across every chart on a page. Place visuals where they read best; move an existing block
-rather than recreating it.
+A new preview starts from the saved baseline. An existing preview retains the person's choices and
+identifies its changes. Model data supplies the opening values and editable assumptions. Local
+JavaScript can calculate a preview from those relationships; unchanged inputs reproduce the saved
+result, historical periods stay fixed, and dependent future values respond at their modeled grain.
+A gesture changes local preview state. `emit` can persist block-local choices or request an explicit
+Ari action; the financial model stays unchanged by the gesture. Reset returns to the current
+model-supplied baseline.
+
+All new page visuals are Canvas blocks: sandboxed React components connected to live model values.
+A requested dashboard or application can be composed from Canvas blocks. Native tables belong to
+[[build-model]], and remain the inspectable basis of the application.
+
+At a narrow width, responsive geometry, focus on a selected object, or readable bounded scrolling
+keeps the useful choice and its immediate consequence together. Customer-facing copy describes the
+business and actionable data conditions; authoring checks belong in the chat handoff. A quiet
+caption identifies a local preview's scope. The host supplies the boundary and inset, so begin
+with a transparent, unbordered field. Containers express real groups, states, or interactive
+boundaries. The shared design system supplies coherence; the business supplies the distinctive
+composition. Move an existing block rather than recreating it.
 
 ## Templates and the component catalog
 
@@ -64,13 +77,30 @@ field description of the Canvas tools: which components exist, what each is for,
 timelines carry local state, how navigation and chat intents are emitted, and which values come
 from theme tokens. Read a component's entry when the visual leans on it.
 
-Controls come from the injected design system: `Button` or `InlineButton` for actions, `TextInput`
-or `TextArea` for text, `Select`, `SegmentedControl`, or `RadioGroup` for choices, `Checkbox` or
-`Toggle` for on/off values, and `Slider` for ranges. A native input carries date and time values.
-Local React components and native HTML/SVG compose layout and marks around the controls. A local
-component lives at the top level of the source, outside `Block`, and takes its values as props; one
-declared inside `Block` is a new component on every render, so React remounts it and its input
-loses focus on each keystroke.
+Injected components provide reusable interactions: `Timeline` or `DecisionTimeline` for row-based schedules,
+`EditableChart` for editable future points or bar endpoints, `BusinessDriver` for an amount,
+`EditableAllocation` for a fixed-total boundary, and `InteractiveFunnel` for conversion. Their
+catalog entries define the gesture and callback contracts. `Chart` supports comparison and mark
+selection; a read-only outcome remains an outcome.
+
+A coordinated application can also compose its own HTML/SVG marks and interaction handlers when
+one geometry must own both the adjustable objects and their consequences. One time scale can place
+events, cash paths, reference lines, and the active date guide in the same picture. Reuse injected
+components where their form fits, and use theme values and source-aware formatting throughout the
+custom representation. The application is free to choose the form that makes its business clear.
+
+An SVG viewBox scales text and pointer targets along with geometry. Derive geometry from the
+available container width, or preserve a readable scale within bounded scrolling. Labels and hit
+regions retain their useful physical size. The event's hit region owns its drag; the surrounding
+figure retains normal touch scrolling. A small visible mark can have a larger interaction target.
+
+Conventional controls fit choices without a useful spatial representation or provide precise
+alternatives within that representation: `Button` and `InlineButton` for actions, `TextInput` and
+`TextArea` for text, `Select`, `SegmentedControl`, and `RadioGroup` for choices, `Checkbox` and
+`Toggle` for on/off values, and `Slider` for abstract ranges. A native input carries date and time
+values. Local React components and native HTML/SVG compose layout and specialized marks around
+these controls. A local component lives at the top level of the source, outside `Block`, and takes
+its values as props; one declared inside `Block` remounts on each render and loses input focus.
 
 A control that opens an app destination emits `navigate` from a click handler, because the host
 honors a navigation only after a recent browser-recognized interaction; an anchor's `href` would
@@ -80,8 +110,7 @@ current workspace: `/<workspace-slug>/pages/<page-id>` with `?scenario=<scenario
 `#block-anchor-<block-id>`. A relative URL resolves against the app page, and a query-only URL
 replaces the current query. Navigation follows the app's permissions and changes no model value.
 
-Canvas templates are reusable building instructions for a business question, such as hiring or
-runway. When templates are enabled, run a `list` with `kind: "template"` for the question before
+Canvas templates are business briefs for a question, such as hiring or runway. When templates are enabled, run a `list` with `kind: "template"` for the question before
 designing, read a match with `read` along with the component contracts the visual needs, and adapt
 its defaults to the person's explicit preferences. Selected template instructions and component
 context arrive appended to the request. A selected template binds to real model datasets.
@@ -90,7 +119,7 @@ When templates are disabled, offer an ordinary chart or KPI. A gated template is
 so generic markup, SVG, or chart options cannot stand in for it.
 
 Give each interactive control, and the value it changes, a stable `data-guide-anchor` id such as
-`data-guide-anchor="pricing-slider"`. A saved walkthrough spotlights those ids; without them it can
+`data-guide-anchor="hire-start"`. A saved walkthrough spotlights those ids; without them it can
 point only at the whole block. Keep the id when the source changes.
 
 A button that launches a saved guide asks Ari for it in a new chat. Set `ariAction` on the injected
@@ -209,16 +238,38 @@ values as supplied. AG Charts draws stacked and normalized series, waterfall run
 histogram bin counts from them, so the drawn shape of those series differs from the list. The check renders and reads; clicks, typing, links, and guide launches stay untested. An unavailable check leaves
 rendering untested; a failed check leaves the edit saved.
 
-Text diagnostics settle ordinary checks. Request a `visual_review` of one changed block when seeing
-the settled result would change your next decision: a dense dashboard where clipping, overlap,
-contrast, or hierarchy matters. It shows the 1200 px frame, so hover and interaction stay unproven, and other widths are
-covered only by the width warnings.
+## Aesthetic design pass
 
-Before saving, make one deliberate craft pass on the rendered composition: the eye's entry point,
-scan path, grouping, numeric alignment, active and hover states, empty and error behavior, long
-labels, narrow width, and overflow. Fix the few largest defects without broadly restyling the block.
-The result still reads when color is removed, and every remaining mark or control carries
-information or enables a real action.
+A working first render is a design draft. Before handing over an interactive application, give it
+a separate aesthetic pass: typography and typesetting, visual hierarchy, colors, balance, and
+especially composition. Rendering checks establish execution and layout facts; this pass judges
+whether the picture makes the business decision tangible.
+
+Request a `visual_review` with `view: "desktop-opening"` and inspect the rendered application as a
+designer. This is a fixed Canvas area visible before scrolling. Its independent assessment is a fresh
+reader's judgment of the visible evidence; concrete gaps between that reading and the intended
+experience are design work. Keep the same opening through revisions so the comparison tests the
+composition. A measured `viewport` explores a different available area;
+the full image shows secondary content below the opening. `framing` reports what the image actually
+shows. Choose a deliberate
+composition for its particular objects and relationships. The opening view puts the meaningful
+action and its financial consequence in one working picture. Controls belong on the things they
+change; exact entry belongs at the selected object; current values and comparisons belong at the
+marks they explain. Use the available space to make that relationship immediately understandable
+on both desktop and a narrow screen. The person's attention can focus on one object while the
+rest retain enough context to choose another.
+
+The existing data and calculation behavior are the basis of this pass. Preserve baseline
+comparison, reset, keyboard and exact entry, and model inspection. Keep the shared type and theme
+tokens; improve their use through sizing, weight, alignment, line breaks, contrast, and restraint.
+Revise the composition's largest weakness, then inspect the rendered result again. The design
+critique belongs in the chat handoff; the application itself explains the business.
+
+The block image does not show the surrounding page, and a static render does not exercise a gesture. Use
+available interaction evidence to check the changed date or amount, its dependent values, reset,
+and the path into the model. Describe untested behavior accurately. The saved page's reading order
+must give the working application its strongest position rather than delaying it with repeated
+explanation.
 
 ## Changing an existing visual
 
