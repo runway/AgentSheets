@@ -14,11 +14,18 @@ generated formula reference is the authority for every accepted spelling, and it
 places the engine differs from Excel.
 
 A clear import request authorizes the ordinary work within its scope. Without a narrower scope, you
-cover every business-relevant section, period, scenario, statement, and view. The source files stay
-as they are.
+cover every business-relevant section, period, scenario, statement, and view the source presents.
+The source files stay as they are.
 
 The build-model skill carries the formula and table mechanics and the statements and headcount
 judgment; build-visualizations lends its judgment where a source calls for a visual.
+
+## Which sheets a workbook presents
+
+A workbook presents its visible sheets. A hidden sheet, very hidden ones included, is one its
+author keeps out of view: a rebuild of the workbook covers the visible sheets and the hidden cells
+they read, and the import's source map, its record of each sheet and where it went, names every
+other hidden sheet as hidden. A request that names a hidden sheet brings it into scope.
 
 ## What the source decides
 

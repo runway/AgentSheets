@@ -5,22 +5,33 @@ description: Build model-connected Canvas visualizations and interactive applica
 
 # Build visualizations
 
-A Canvas application is a working representation of a business decision. The financial model
-describes what happens; the application gives the person a useful way to act on that model and
-understand the consequences. An explanatory visual makes evidence easier to compare. A simulation
-makes a business choice directly manipulable.
+A Canvas application is a working representation of a business: the outcomes a person answers
+for, the levers that move them, and the choices they make. The financial model describes what
+happens; the application gives the person a useful way to act on that model and understand the
+consequences. Its scope follows its reader and their question. A question about one choice gets an
+application about that choice. A first picture of a business, such as the application that closes
+an onboarding build, shows the business as a system: its outcome over time and the few levers that
+move it most. An explanatory visual makes evidence easier to compare. A simulation makes business
+choices directly manipulable.
 
-The design bar combines Tufte's clarity of quantitative evidence with Bret Victor's immediacy of
-action and consequence. The shared product theme supplies the visual language.
+The design bar is a finely made print graphic that the reader can handle: Tufte's clarity of
+quantitative evidence, the composition and typesetting of an editorial infographic, and Bret
+Victor's immediacy of action and consequence. The shared product theme supplies the visual language.
+
+The person came to read a number or move a lever, so the block is first a working product of its
+category. Its controls are the ones the person already knows, the same control looks the same
+everywhere in the block, and motion marks a state change in under a quarter of a second and then
+settles. The workspace brand lends type, palette, density, and one signature move; it never
+supplies the layout or the controls. Brand lives in precise details.
 
 Its form comes from the objects and relationships in the business. A hire begins at a date and
 creates recurring cost and capacity. A contract has a service period, billing terms, and
 collections. A scarce resource is divided between competing uses. The model determines which
 quantities are choices, which are consequences, and what connects them.
 
-Timing is often a particularly revealing choice. Moving a consequential event lets the person see
-how a familiar scheduling decision changes several parts of the forecast together. When timing
-matters, give the event a visible place in time and make that position adjustable. Its dependencies
+When timing matters, moving a consequential event lets the person see how a familiar scheduling
+decision changes several parts of the forecast together. Give the event a visible place in time and
+make that position adjustable. Its dependencies
 retain their business meaning: moving a collection changes cash, while moving a service start can
 change when revenue is earned. A point changes date; a span may move while preserving duration or
 have an editable end when duration is itself a choice.
@@ -34,13 +45,26 @@ objects, its geometry explains their relationships, and its annotations give the
 The first useful action and its financial consequence occupy the opening view together. A cash
 minimum is labelled at the low point; a changed event carries its date and difference; selecting
 that event opens precise editing beside it. Overview, action, comparison, and detail have a common
-visual home.
+visual home. Those annotations are the summary: a separate summary row earns its place only by
+stating what the figure does not already show, in smaller and later type. Selecting an object
+reveals its exact editor at that object, so one business choice has one home. The editor's
+settled fields show the formatted value — the same currency, unit, and precision as the mark
+they edit — and hold a raw number only while the person is typing. Each distinct
+choice in the object has its editor at its own mark: a fee at its amount, a lag at the interval
+it creates, a start at its event. A form that collects those choices elsewhere repeats the
+figure instead of completing it. A suggested
+alternative or optimizer result stays subordinate to the saved plan the person is exploring.
 
 In a time-based figure, the same horizontal position means the same period. Event marks sit on or
 beside the financial paths they affect. The person can hold an event, move it, and watch the
 response in that picture. The saved position and original path remain visible. Constraints,
 plateaus, and delays appear where they affect the choice. Related marks retain their identity
-across views. This relationship stays intact as the width changes.
+across views. This relationship stays intact as the width changes. The same principle holds
+without time: an amount is edited at its drawn value, a conversion at the edge between its
+stages, a fixed-total share at the boundary between its segments, and a future quantity at its
+own point. In a composed figure, that boundary is itself the draggable handle, with each
+segment's amount and share labeled at the segment. In each case the gesture, the saved state, and the responding consequence share one
+picture.
 
 The question determines the information form. A known conclusion needs its convincing proof.
 Exploring a population benefits from comparison, focus, and exact detail; tables with embedded
@@ -48,7 +72,25 @@ marks and aligned small multiples can make dense evidence readable. Position and
 quantities, hue carries identity, and an ordered lightness scale carries magnitude. Comparable
 views retain consistent units, scales, and periods. Labels belong to the marks they explain.
 Each important distinction has a readable cue in its position, shape, line style, or label as well
-as color.
+as color. One hue keeps one meaning inside a block.
+
+The opening reads as one composed picture. A short business question or claim uses the shared
+heading treatment, the working figure carries the strongest visual weight, and supporting detail
+stays quieter. Use the shared type roles and the injected formatValue and formatCompactValue
+helpers rather than inventing local font-size scales or number formatters. Direct labels, exact
+editors, and tooltips use exact source formats; axes may use compact values. Comparable numbers
+align with tabular numerals. A zero difference reads "No change" in neutral treatment. Mixed
+tradeoffs use neutral signed values; favorable and unfavorable colors express an explicit business
+judgment rather than numeric sign.
+
+Axis ticks are deliberate round values in business units, and scales hold steady through a gesture
+so movement reads as business change. Discrete periods use linear or step segments; smooth
+interpolation belongs to a meaningful continuous relationship. Direct labels name saved and
+current values at the important endpoint, low, crossing, or constraint. When preview and saved
+paths coincide, one path is directly labeled as both and an explicit zero-difference treatment
+establishes the comparison. When they diverge, the difference itself is drawn and labeled where it
+matters most. A plateau or materially unchanged outcome carries its explanation at the affected
+mark, such as capacity remaining above demand.
 
 A new preview starts from the saved baseline. An existing preview retains the person's choices and
 identifies its changes. Model data supplies the opening values and editable assumptions. Local
@@ -62,13 +104,55 @@ All new page visuals are Canvas blocks: sandboxed React components connected to 
 A requested dashboard or application can be composed from Canvas blocks. Native tables belong to
 [[build-model]], and remain the inspectable basis of the application.
 
+Canvas authoring starts with an `inspect_canvas_library` `read` of a visual component or template. Its `runtime_contract` defines
+the sandbox's data, theme, state, and event interfaces once beside the requested component props.
+The source field keeps the component signature and common layout props available throughout the work.
+
 At a narrow width, responsive geometry, focus on a selected object, or readable bounded scrolling
-keeps the useful choice and its immediate consequence together. Customer-facing copy describes the
-business and actionable data conditions; authoring checks belong in the chat handoff. A quiet
-caption identifies a local preview's scope. The host supplies the boundary and inset, so begin
+keeps the useful choice and its immediate consequence together. Copy leads with the business
+question, result, and interaction. Estimate and forecast disclosures belong only in the Ari chat
+session, alongside their sources, assumptions, and authoring checks. A delegated writer returns
+those details to Ari in its report. A quiet caption identifies a local preview's scope.
+The host supplies the boundary and inset, so begin
 with a transparent, unbordered field. Containers express real groups, states, or interactive
 boundaries. The shared design system supplies coherence; the business supplies the distinctive
 composition. Move an existing block rather than recreating it.
+
+## A business on one page
+
+A first picture of a business is one composition with one reading order. The parts below are the
+ones that usually carry the relationship between an outcome and its levers; the business decides
+the exact form each one takes. A short headline states
+the business and the state it is in, in the company's own words. The backbone figure owns the
+center: the outcome the reader answers for, drawn over time with its saved path, its milestones,
+and the point where it crosses a threshold that matters to this business, labeled at the mark.
+The levers sit beside or beneath it as a set of smaller figures that share its time axis or its
+scale, each drawn as the business object it is: a launch as a dated span, a price as a point on its
+demand curve, a funnel stage as the edge between two volumes, a team as its headcount steps. A rate
+is the shape of the path it produces: a growth rate is the bend of that future path, so the person
+drags the path's end and the rate follows, with the exact rate shown at the mark. Each
+lever is changed where it is drawn, and every change redraws the backbone in place, with the
+saved path still visible and the difference drawn. Detail and method come last, visibly quieter.
+
+The levers are the inputs that move the outcome most in this business, drawn from every part of
+it that moves the outcome: what brings revenue in, what sends cash out, and how the business is
+funded. Within each part, the model shows which inputs carry the largest amounts, and the block's
+local preview confirms the choice, because it computes the outcome for any lever value.
+
+Each lever also shows its whole range. Beside the lever, a small curve plots the outcome across
+the lever's plausible range, computed with the same preview function, with the current value
+marked and, when the model holds a threshold such as a cash reserve, the value where the outcome
+crosses it labeled. The reader sees where the
+edge is before reaching it, which a single preview value cannot show. The headline sentence can be
+live too: a sentence that states the current answer, whose input values the reader can drag in
+place, keeps the words and the figure in agreement.
+
+The craft is that of a finely made print graphic. The business's own objects, units, and
+vocabulary give the composition its identity, so a fleet's vehicles, a marketplace's bookings, and
+a retailer's stores each look like themselves. Annotations sit where the eye lands, joined to their
+marks by short leaders. Generous margins, aligned edges, one accent for the current selection, and
+quiet axes let the evidence carry the page. The workspace brand's heading face and accent arrive
+through the theme tokens.
 
 ## Templates and the component catalog
 
@@ -95,12 +179,21 @@ regions retain their useful physical size. The event's hit region owns its drag;
 figure retains normal touch scrolling. A small visible mark can have a larger interaction target.
 
 Conventional controls fit choices without a useful spatial representation or provide precise
-alternatives within that representation: `Button` and `InlineButton` for actions, `TextInput` and
-`TextArea` for text, `Select`, `SegmentedControl`, and `RadioGroup` for choices, `Checkbox` and
-`Toggle` for on/off values, and `Slider` for abstract ranges. A native input carries date and time
-values. Local React components and native HTML/SVG compose layout and specialized marks around
-these controls. A local component lives at the top level of the source, outside `Block`, and takes
-its values as props; one declared inside `Block` remounts on each render and loses input focus.
+alternatives within that representation. They are ordinary HTML: `<button>` for actions, `<input>`
+for text, numbers, dates, times, and months, `<select>` or radio inputs in a `<fieldset>` for choices, a
+checkbox for an on/off value (with `role="switch"` it draws as a switch), `<input type="range">`
+beside an `<output>` for an abstract range, and `<textarea>` for longer text. A file input lets the
+person choose a local file, which the block reads in that browser with `File.text()` or
+`arrayBuffer()`; Ari receives only what the block passes on, such as text in a `startAriChat`
+message, which holds at most 4,000 characters. The Canvas stylesheet draws each element in the
+product's type, colors, corners, focus ring, and disabled state, in light and dark mode, so a
+`<label>` and the element make a finished control. An unmarked button is outlined; `data-variant`
+of `accent`, `ghost`, or `destructive` sets its emphasis, and an element with
+`data-variant="segmented"` draws the radio labels that are its direct children as one segmented track. A style or class on an element takes
+precedence over the stylesheet. Local React components and HTML/SVG compose layout and specialized
+marks around these controls. A local component lives at the top level of the source, outside
+`Block`, and takes its values as props; one declared inside `Block` remounts on each render and
+loses input focus.
 
 A control that opens an app destination emits `navigate` from a click handler, because the host
 honors a navigation only after a recent browser-recognized interaction; an anchor's `href` would
@@ -122,10 +215,9 @@ Give each interactive control, and the value it changes, a stable `data-guide-an
 `data-guide-anchor="hire-start"`. A saved walkthrough spotlights those ids; without them it can
 point only at the whole block. Keep the id when the source changes.
 
-A button that launches a saved guide asks Ari for it in a new chat. Set `ariAction` on the injected
-`Button` so a non-icon button gets the standard trailing arrow and all button kinds get subtle Ari
-feedback on hover, keyboard focus, and click. Use `ariAction` only for buttons that start Ari work;
-do not hand-author another Ari icon or glow. The button calls
+A button that launches a saved guide asks Ari for it in a new chat. A `data-ari-action` attribute
+marks a button that starts Ari work: the stylesheet gives it the standard trailing arrow and Ari's
+moving edge on hover and keyboard focus. The button calls
 `emit({ type: 'startAriChat', message }, event)` synchronously in its
 `onClick` and passes that click event; the app opens a new chat in the block's scenario and sends
 the message. The message reads as the person's own request and names the guide by its saved name,
@@ -228,7 +320,14 @@ its `observed` field names. The light render is also laid out at 360, 600, 760, 
 runs into other text or spills out of its box. Fix it before handing the block over: stack columns
 with Grid `minColumnWidth`, let text wrap, or give a wide table a deliberate horizontal scroll with
 columns that keep their width. Grid already stacks a column whose content is wider than the column,
-but it cannot shrink that content. Use that evidence for the changed block; its warnings can reveal a
+but it cannot shrink that content. A warning that begins with "Design:" names an element wearing a
+generated interface's default: a container inside a container, a stripe or a glow standing in for
+emphasis, a tracked uppercase label above a heading, text below reading size or below contrast, a
+size off the type scale, motion that marks no change, or an emoji where an icon belongs. It names
+the element, its source position when it has one, what was measured, and the move. An element with that shape was
+assembled, not decided. Rewrite it as the thing the business needs; a thinner border or a smaller
+label keeps the default and loses its clarity. The person's explicit request for one of those
+forms is the one thing that earns it. Use that evidence for the changed block; its warnings can reveal a
 wrong variable, breakdown, filter, window, or chart option, and they name the rows where a numeric
 series in the whole dataset is blank or any series holds an error code such as `#DIV/0!`. The
 block receives null in each of those cells. Its `plotted` list holds the values each chart was
@@ -243,7 +342,7 @@ rendering untested; a failed check leaves the edit saved.
 A working first render is a design draft. Before handing over an interactive application, give it
 a separate aesthetic pass: typography and typesetting, visual hierarchy, colors, balance, and
 especially composition. Rendering checks establish execution and layout facts; this pass judges
-whether the picture makes the business decision tangible.
+whether the picture makes the business tangible.
 
 Request a `visual_review` with `view: "desktop-opening"` and inspect the rendered application as a
 designer. This is a fixed Canvas area visible before scrolling. Its independent assessment is a fresh
@@ -255,18 +354,36 @@ shows. Choose a deliberate
 composition for its particular objects and relationships. The opening view puts the meaningful
 action and its financial consequence in one working picture. Controls belong on the things they
 change; exact entry belongs at the selected object; current values and comparisons belong at the
-marks they explain. Use the available space to make that relationship immediately understandable
+marks they explain. Read the opening as its first reader: what the summaries repeat, where the
+editor sits relative to its object, whether the saved comparison can actually be seen, and
+whether the scales and colors mean one thing are composition findings; revise the largest
+finding first. A revision keeps every lever the picture offers: a lever held in a separate
+editor moves onto the object it changes, so the reader can still handle it. Then read it at a squint: one headline that states the business question with
+confidence, one figure that owns the center, and support that is visibly quieter. Hierarchy
+comes from size, weight, position, and contrast; summaries sit as open columns under light
+rules, and a border encloses only a group that needs one. The company's identity lives in the
+composition itself — its objects, units, and relationships — while the shared tokens keep it
+recognizably part of the product. Use the available space to make that relationship immediately understandable
 on both desktop and a narrow screen. The person's attention can focus on one object while the
 rest retain enough context to choose another.
+
+Each non-null `revision` drives another largest-first composition pass and a new review of the same
+opening. Handoff follows `revision: null`, which means no material visual defect remains under the
+assessment rubric. A finding left unresolved at the existing turn budget stays open in the handoff; it
+is not an aesthetic pass.
 
 The existing data and calculation behavior are the basis of this pass. Preserve baseline
 comparison, reset, keyboard and exact entry, and model inspection. Keep the shared type and theme
 tokens; improve their use through sizing, weight, alignment, line breaks, contrast, and restraint.
-Revise the composition's largest weakness, then inspect the rendered result again. The design
-critique belongs in the chat handoff; the application itself explains the business.
+A row of identical cards, a label over every heading, or a summary strip restating the figure is
+a default of the same kind, one the visual review judges rather than the render check measures:
+assembled rather than decided unless the business earns the form. Rewrite such an element as the
+one the business needs. Revise the composition's largest weakness, then inspect the rendered
+result again. The design critique belongs in the chat handoff; the application itself
+explains the business.
 
-The block image does not show the surrounding page, and a static render does not exercise a gesture. Use
-available interaction evidence to check the changed date or amount, its dependent values, reset,
+The block image does not show the surrounding page, and a static render does not exercise a gesture.
+Use available interaction evidence to check the changed date or amount, its dependent values, reset,
 and the path into the model. Describe untested behavior accurately. The saved page's reading order
 must give the working application its strongest position rather than delaying it with repeated
 explanation.

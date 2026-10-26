@@ -414,7 +414,7 @@ columns costs rows times columns, and a mapped column adds a lookup per row. A r
 on the records keeps that column, and the rest of the spreadsheet comes with it only when the whole
 table is cheap. When the records are too many for every column, the columns the request names and
 the ones needed to read them stay, with the row dimension's items filtered to the rows that matter.
-A table is the person's report, and a wrong window is fixed on the table itself.
+A table is the person's report, and a wrong window is fixed on the table itself. A table wider than the page scrolls sideways across its displayed columns, with Shift and the mouse wheel, a trackpad swipe, or the bar along its bottom edge that shows while the pointer is over the table. A collapsed column group shows the periods inside it once the person expands it from its header; whether a group is open is that person's view in their browser, not a setting of the saved table. Its window and columns are what every viewer of the page sees.
 
 Period-specific inputs and reports use system Date; genuinely timeless mappings, rosters, and
 assumptions can omit it. Writing dated values or selecting periods for readback does not set the
@@ -438,7 +438,9 @@ Mutually exclusive business futures are scenarios. Additive dimension items coex
 and their aggregate answers a real question; a total across alternative fundraising or growth cases
 answers nothing, so alternatives are scenarios and the model's dimensions are the coordinates the
 business actually has. A scenario inherits unchanged state from its base. User-authored overrides
-are scenario-scoped; imported source records stay shared and read-only.
+are scenario-scoped; imported source records stay shared and read-only. A requested view or chart
+is a page in the scenario in view, whatever the request calls it; people often say "scenario" for a
+view. A page built in a scenario shows there and in the scenarios built on it.
 
 A write with no `scenario` lands in the scenario the person is viewing, which can change between
 turns; a write meant for another scenario names it. A lever that moves only the forecast is a dated
@@ -537,8 +539,8 @@ for unnamed people, and cohorts for unnamed customers, one per combination of di
 
 ## Controls and pages
 
-Shared inputs live together on one page the operator reads top to bottom: growth, pricing, churn,
-hiring pace, unit costs, payment terms. A control sits at the grain
+Shared inputs live together on one page the operator reads top to bottom, a table for each subject:
+growth, pricing, churn, hiring pace, unit costs, payment terms. A control sits at the grain
 where someone would change it, a churn rate per plan, a hiring start per role, and within a range
 that makes business sense to move. Every calculated output traces to these controls, so moving one
 changes the whole business; the forecast simulator that closes a build binds to this page, and the
