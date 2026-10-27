@@ -347,7 +347,9 @@ whether the picture makes the business tangible.
 Request a `visual_review` with `view: "desktop-opening"` and inspect the rendered application as a
 designer. This is a fixed Canvas area visible before scrolling. Its independent assessment is a fresh
 reader's judgment of the visible evidence; concrete gaps between that reading and the intended
-experience are design work. Keep the same opening through revisions so the comparison tests the
+experience are design work. Its `brief` carries that intended experience in your words: what the
+opening shows and the choices already settled for it, including the hierarchy, scope, and
+requirements the person or a review set, so the assessment judges the design you were asked for. Keep the same opening through revisions so the comparison tests the
 composition. A measured `viewport` explores a different available area;
 the full image shows secondary content below the opening. `framing` reports what the image actually
 shows. Choose a deliberate
@@ -370,7 +372,7 @@ rest retain enough context to choose another.
 Each non-null `revision` names a material defect and drives another largest-first composition pass
 and a new review of the same opening. Handoff follows `revision: null`, which means no material
 visual defect remains under the assessment rubric. `refinement` is an optional improvement that
-leaves the reading intact; it is yours to take or leave. A finding left unresolved at the existing turn budget stays open in the handoff; it
+leaves the reading intact; it is yours to take or leave within the brief. A finding left unresolved at the existing turn budget stays open in the handoff; it
 is not an aesthetic pass.
 
 The existing data and calculation behavior are the basis of this pass. Preserve baseline
