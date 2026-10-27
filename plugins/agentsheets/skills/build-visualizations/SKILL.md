@@ -367,9 +367,10 @@ recognizably part of the product. Use the available space to make that relations
 on both desktop and a narrow screen. The person's attention can focus on one object while the
 rest retain enough context to choose another.
 
-Each non-null `revision` drives another largest-first composition pass and a new review of the same
-opening. Handoff follows `revision: null`, which means no material visual defect remains under the
-assessment rubric. A finding left unresolved at the existing turn budget stays open in the handoff; it
+Each non-null `revision` names a material defect and drives another largest-first composition pass
+and a new review of the same opening. Handoff follows `revision: null`, which means no material
+visual defect remains under the assessment rubric. `refinement` is an optional improvement that
+leaves the reading intact; it is yours to take or leave. A finding left unresolved at the existing turn budget stays open in the handoff; it
 is not an aesthetic pass.
 
 The existing data and calculation behavior are the basis of this pass. Preserve baseline
