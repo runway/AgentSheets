@@ -86,11 +86,11 @@ judgment rather than numeric sign.
 Axis ticks are deliberate round values in business units, and scales hold steady through a gesture
 so movement reads as business change. Discrete periods use linear or step segments; smooth
 interpolation belongs to a meaningful continuous relationship. Direct labels name saved and
-current values at the important endpoint, low, crossing, or constraint. When preview and saved
-paths coincide, one path is directly labeled as both and an explicit zero-difference treatment
-establishes the comparison. When they diverge, the difference itself is drawn and labeled where it
-matters most. A plateau or materially unchanged outcome carries its explanation at the affected
-mark, such as capacity remaining above demand.
+current values at the important endpoint, low, crossing, or constraint. At rest, the figure
+draws the saved path alone or one path labeled as both saved and current. When the paths
+diverge, the difference itself is drawn and labeled where it matters most. When a choice leaves
+its outcome unchanged, the relationship that holds it is drawn, such as demand staying below
+capacity.
 
 A new preview starts from the saved baseline. An existing preview retains the person's choices and
 identifies its changes. Model data supplies the opening values and editable assumptions. Local
@@ -109,10 +109,11 @@ the sandbox's data, theme, state, and event interfaces once beside the requested
 The source field keeps the component signature and common layout props available throughout the work.
 
 At a narrow width, responsive geometry, focus on a selected object, or readable bounded scrolling
-keeps the useful choice and its immediate consequence together. Copy leads with the business
-question, result, and interaction. Estimate and forecast disclosures belong only in the Ari chat
-session, alongside their sources, assumptions, and authoring checks. A delegated writer returns
-those details to Ari in its report. A quiet caption identifies a local preview's scope.
+keeps the useful choice and its immediate consequence together. The words on a block are its
+business question, the labels at its marks, the values, and how to use its controls. Everything
+said about the work itself lives in the Ari chat session: estimate and forecast disclosures, their
+sources and assumptions, authoring checks, a preview's scope, and what a number is not. A delegated
+writer returns those details to Ari in its report.
 The host supplies the boundary and inset, so begin
 with a transparent, unbordered field. Containers express real groups, states, or interactive
 boundaries. The shared design system supplies coherence; the business supplies the distinctive
@@ -213,7 +214,11 @@ so generic markup, SVG, or chart options cannot stand in for it.
 
 Give each interactive control, and the value it changes, a stable `data-guide-anchor` id such as
 `data-guide-anchor="hire-start"`. A saved walkthrough spotlights those ids; without them it can
-point only at the whole block. Keep the id when the source changes.
+point only at the whole block. Keep the id when the source changes. An element in a part that
+starts closed, such as a disclosure or a tab, isn't drawn until the person opens it. Name its ids
+on the control that opens it, as `data-guide-reveals="liquidity holdings"`, so a walkthrough step
+on one of them opens the part first. Keep a disclosure toggle's `aria-expanded` current, so the
+step never closes a part that is already open.
 
 A button that launches a saved guide asks Ari for it in a new chat. A `data-ari-action` attribute
 marks a button that starts Ari work: the stylesheet gives it the standard trailing arrow and Ari's
@@ -401,4 +406,5 @@ or `column` selection refers to the presentation component's matching data.
 Preserve block identities and leave unrelated work intact. `inspect_canvas_blocks` returns a block's
 saved source, configuration, and reusable reference. The saved model table or its variables supply
 the values for an answer. Focused changes are `source_patches`, one call holding every exact
-replacement the change needs; a deliberate whole-component rewrite is a new `source`.
+replacement the change needs; a deliberate whole-component rewrite is a new `source`, with the
+`source_hash` of the read or write it was written from as `based_on`.
