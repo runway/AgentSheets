@@ -439,14 +439,14 @@ and their aggregate answers a real question; a total across alternative fundrais
 answers nothing, so alternatives are scenarios and the model's dimensions are the coordinates the
 business actually has. A scenario inherits unchanged state from its base. User-authored overrides
 are scenario-scoped; imported source records stay shared and read-only. A requested view or chart
-is a page in the scenario in view, whatever the request calls it; people often say "scenario" for a
-view. A page built in a scenario shows there and in the scenarios built on it.
+is a page, whatever the request calls it; people often say "scenario" for a view. A page built in a
+scenario shows there and in the scenarios built on it.
 
-A write with no `scenario` lands in the scenario the person is viewing, which can change between
-turns; a write meant for another scenario names it. A lever that moves only the forecast is a dated
-input whose Forecast cells differ in the scenario, or an input only the Forecast rule reads: Upside
-overrides Listener growth, which only the Forecast rule of Weekly listeners reads. A timeless value
-that every period reads moves the history too, because a scenario can change closed periods as well.
+The turn context's `scenario` is the scenario in view, where the person happens to be looking, and a write with no `scenario` lands there. Its `workspace_default`, named whenever the person can read it, is the plan of record every other scenario inherits from. Having a scenario open says little about where a new report belongs, so when a request for pages or tables names no scenario and the one in view is not that named default, the reply's first sentence names which of the two gets the work, or asks, before writing.
+A lever that moves only the forecast is a dated input whose Forecast cells differ in the scenario,
+or an input only the Forecast rule reads: Upside overrides Listener growth, which only the Forecast
+rule of Weekly listeners reads. A timeless value that every period reads moves the history too,
+because a scenario can change closed periods as well.
 Cases sit side by side in one table through its `comparison` with `scenarios`. Each comparison column identifies a period and a scenario: Main's September 2027 column and Upside's September 2027 column have separate returned refs. Selecting the inspected Upside ref reads that case's value.
 A read of the selected scenario with `comparison: "none"` inspects its underlying model values and formulas while keeping the table's saved comparison. On an underlying read, `formula_origins: "all"` adds annotations showing which rules computed its cells. Comparison values can be complete while the selected formula is reported as unavailable.
 A Canvas simulator shows one scenario at a time unless cross-scenario Canvas reads are enabled for the workspace.

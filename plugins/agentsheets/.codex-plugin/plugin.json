@@ -1,6 +1,6 @@
 {
   "name": "agentsheets",
-  "version": "0.1.15+g0568320",
+  "version": "0.1.16+g4ee0518",
   "description": "Model in cfo.ai from your agent: dimensional modeling, formulas, tables, and charts, backed by the cfo.ai MCP server.",
   "displayName": "AgentSheets",
   "shortDescription": "Financial modeling in cfo.ai, driven by your agent.",

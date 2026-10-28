@@ -193,8 +193,11 @@ of `accent`, `ghost`, or `destructive` sets its emphasis, and an element with
 `data-variant="segmented"` draws the radio labels that are its direct children as one segmented track. A style or class on an element takes
 precedence over the stylesheet. Local React components and HTML/SVG compose layout and specialized
 marks around these controls. A local component lives at the top level of the source, outside
-`Block`, and takes its values as props; one declared inside `Block` remounts on each render and
-loses input focus.
+`Block`, and takes its values as props. One declared inside `Block` is a new component on each
+render, so React remounts it: its chart redraws and loses hover state, and its input loses focus.
+A Canvas save refuses a source that declares one there and renders it as JSX. A create from
+`source_template` saves the published code as it is, and the block's next source change takes
+that check.
 
 A control that opens an app destination emits `navigate` from a click handler, because the host
 honors a navigation only after a recent browser-recognized interaction; an anchor's `href` would
