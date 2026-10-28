@@ -44,7 +44,7 @@ from inputs at each cell's coordinates and keeps its dependencies even when toda
 Its condition names the Date grain: a Month rule reaches additional business dimensions at Month;
 a daily forecast needs matching Day coverage, and time conversions are explicit calculations.
 Actuals and Forecast are separate range choices. The saved scope and selected rule explain coverage;
-a literal such as months in a year is part of the rule.
+a literal such as months in a year is part of the rule. A typed input is a saved rule of its own at its cell's coordinates, and the calculation evaluates every rule a variable holds, so a grid of typed values is as many rules as it has cells.
 
 A forecast reads earlier cells. A dated input carries forward through an opening cell and a
 default formula for later periods, so every later month depends on the assumption. Repeated literals
@@ -485,7 +485,7 @@ Build with these rules; check them when calculations slow or time out:
 - **Use only necessary time detail.** Prefer monthly or yearly source queries and formulas when finer detail cannot change results.
 - **Use general formulas.** Use the cell's system Date or dimension item instead of copies with hardcoded years or items.
 - **Share expensive expressions.** Consider helper variables for repeated calculations; measure whether they improve performance.
-- **Use source data.** Read available amounts, dates, and items instead of hardcoding values or manual lists. Keep editable assumptions where needed.
+- **Use source data.** Read available amounts, dates, and items instead of hardcoding values or manual lists. A large set of fixed values, such as history, a roster, or a list of transactions, is the rows of a source table that variables read through their aggregation, one rule for all of them: `edit_integrations` `ingest_csv` loads a CSV prepared in the workspace as that source, inline when it is small and through its upload slot when it is large. A table write's receipt states under `variable_rules` how many rules each written variable held before the write and holds after it. Keep editable assumptions where needed.
 
 Preserve exceptions, event timing, historical observations, dimensions, and Actuals/Forecast coverage. Verify repairs with the same read: unchanged values, missingness, and errors; improved calculation time.
 
