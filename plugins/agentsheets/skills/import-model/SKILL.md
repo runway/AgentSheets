@@ -87,8 +87,19 @@ per scenario. A column labeled `FY26 Budget` can carry both a Date and a scenari
 an additive dimension. Inspect the existing scenarios before creating any, and leave the unrelated
 ones alone.
 
-Exact stored inputs and their dated changes, zeros included, stay. Tunable assumptions become named
-editable variables; computed outputs stay targets.
+Exact stored inputs and their dated changes, zeros included, carry over, and how each set lands
+follows from how the calculation treats it. A typed input is a saved rule of its own at its cell's
+coordinates, and the calculation evaluates every rule a variable holds, so a grid of typed values
+is as many rules as it has cells. A source table is read as data: its rows are records that
+variables read through their aggregation, one rule for all of them. A large set of fixed values,
+such as a history sheet, a roster, or a list of transactions, anything past a few hundred values,
+is therefore the rows of a source table. The workspace prepares it from the workbook as a CSV at
+the records' real grain, with the sheet's dates as a column, and `edit_integrations` `ingest_csv`
+loads it, inline when it is small and through its upload slot when it is large. The loaded table
+reaches the model's variables once a saved query maps it into the model, as connect-data-sources
+describes. A small set of tunable
+assumptions, the drivers a person changes to move the plan, become named editable variables with
+typed inputs. Computed outputs stay targets.
 
 Distinct measured quantities keep separate columns — melting them into a name-and-value pair creates
 the wrong entries. A source datetime column gets a business name, not `Date`. An annual observation
@@ -170,7 +181,8 @@ true`: a rebuilt section is worth checking at any effort level.
 A connected spreadsheet arrives again as a new attachment each time it changes, and the version
 the model was imported from stays attached beside it. Updating the import compares the two
 versions section by section, guided by the source map. A changed section's tables, formulas, and
-inputs follow the new version. A new section gets a disposition like any other, and a removed
+inputs follow the new version, and a section loaded as a source table reloads into the connection
+that holds it. A new section gets a disposition like any other, and a removed
 section leaves the model or stays for a named reason. Sections that did not change keep what the
 model holds, including edits people made in cfo.ai. Reconciliation covers every changed section
 against the new version, and the source map then names the new version's attachment id.
