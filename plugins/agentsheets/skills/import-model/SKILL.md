@@ -56,7 +56,8 @@ right tab name proves only that the page exists; each section needs its own disp
 reconciliation before the worksheet is covered. Disclose any reader limit you cannot recover from.
 
 A source map, in the plan or a small saved summary, records each sheet and range, what it is for,
-its periods, and where it went. A saved summary names the source file by its attachment id, such as
+its periods, and where it went: the pages and variables it became, or the data source that holds
+it as a source table. A saved summary names the source file by its attachment id, such as
 `runway-file-…`, which is how a later version of the same source finds it.
 
 ## Data, calculation, and presentation are different things
