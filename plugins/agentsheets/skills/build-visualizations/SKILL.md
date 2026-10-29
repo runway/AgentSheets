@@ -195,9 +195,10 @@ precedence over the stylesheet. Local React components and HTML/SVG compose layo
 marks around these controls. A local component lives at the top level of the source, outside
 `Block`, and takes its values as props. One declared inside `Block` is a new component on each
 render, so React remounts it: its chart redraws and loses hover state, and its input loses focus.
-A Canvas save refuses a source that declares one there and renders it as JSX. A create from
-`source_template` saves the published code as it is, and the block's next source change takes
-that check.
+A Canvas create refuses a source that declares one there and renders it as JSX, except a create
+from `source_template`, which saves the published code as it is. An update refuses only the ones
+the block's saved source does not already declare there; the ones it does are kept, and the
+update's `source_notes` name them.
 
 A control that opens an app destination emits `navigate` from a click handler, because the host
 honors a navigation only after a recent browser-recognized interaction; an anchor's `href` would
