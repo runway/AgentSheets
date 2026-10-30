@@ -20,6 +20,19 @@ The source files stay as they are.
 The build-model skill carries the formula and table mechanics and the statements and headcount
 judgment; build-visualizations lends its judgment where a source calls for a visual.
 
+## A workbook over connected data
+
+When a workbook's source sheets are exports of a system already connected in cfo.ai, the connection
+supplies the data and the workbook supplies the business formulas, mappings, and views.
+connect-data-sources describes how those records reach the model and what their readiness proves;
+build-model describes the formulas and mappings over them.
+
+The workbook's visible report and dashboard sheets become pages over the connected data, preserving
+their sections, comparisons, and charts. Exported numbers and comparisons against the workbook belong
+in your own reconciliation checks and appear on pages only when the person asks. Matching periods
+and source coverage make those checks meaningful; later source changes can explain differences from
+the export, with the findings in the chat.
+
 ## Which sheets a workbook presents
 
 A workbook presents its visible sheets. A hidden sheet, very hidden ones included, is one its
@@ -43,10 +56,10 @@ findings once it is read, and parity for the sections reconciliation has proven.
 
 ## The source's shape is the model's navigation
 
-Each in-scope worksheet becomes a page with the same name, and each source-labeled financial section
-becomes a table named after it, so a reader compares every source section with its saved
-counterpart. A section's heading and cell range mark its review boundary, even when several sections
-feed one calculation.
+Each in-scope worksheet that presents assumptions, calculations, or reports becomes a page with the
+same name, and each source-labeled financial section becomes a table named after it. Sheets containing
+only source records are covered by entries in the source map. A section's heading and cell range mark
+its review boundary, even when several sections feed one calculation.
 
 When several sheets are copies of one layout repeated per item, they are one page holding a shared
 dimensioned variable, not one page per copy.
@@ -56,13 +69,14 @@ right tab name proves only that the page exists; each section needs its own disp
 reconciliation before the worksheet is covered. Disclose any reader limit you cannot recover from.
 
 A source map, in the plan or a small saved summary, records each sheet and range, what it is for,
-its periods, and where it went: the pages and variables it became, or the data source that holds
-it as a source table. A saved summary names the source file by its attachment id, such as
-`runway-file-…`, which is how a later version of the same source finds it.
+its periods, and where it went: the pages and variables it became, the source table loaded from the
+workbook, or the existing connection and saved query that already supply its rows. A saved summary
+names the source file by its attachment id, such as `runway-file-…`, which is how a later version of
+the same source finds it.
 
 ## Data, calculation, and presentation are different things
 
-Transaction exports and report leaf rows are observations. They are what you import, at their real
+Transaction exports and report leaf rows are observations. They reach the model at their real
 grain, with stable identities, full parseable dates, currency and signs intact, and the row-level
 business dimensions they carry.
 
@@ -94,12 +108,12 @@ coordinates, and the calculation evaluates every rule a variable holds, so a gri
 is as many rules as it has cells. A source table is read as data: its rows are records that
 variables read through their aggregation, one rule for all of them. A large set of fixed values,
 such as a history sheet, a roster, or a list of transactions, anything past a few hundred values,
-is therefore the rows of a source table. The workspace prepares it from the workbook as a CSV at
-the records' real grain, with the sheet's dates as a column, and `edit_integrations` `ingest_csv`
-loads it, inline when it is small and through its upload slot when it is large. The loaded table
-reaches the model's variables once a saved query maps it into the model, as connect-data-sources
-describes. A small set of tunable
-assumptions, the drivers a person changes to move the plan, become named editable variables with
+is therefore read from a source table. For records not already supplied by a connection, the
+workspace prepares that table from the workbook as a CSV at the records' real grain, with the sheet's
+dates as a column, and `edit_integrations` `ingest_csv` loads it, inline when it is small and through
+its upload slot when it is large. The loaded table reaches the model's variables once a saved query
+maps it into the model, as connect-data-sources describes. A small set of tunable assumptions, the
+drivers a person changes to move the plan, become named editable variables with
 typed inputs. Computed outputs stay targets.
 
 Distinct measured quantities keep separate columns — melting them into a name-and-value pair creates
@@ -197,8 +211,8 @@ The shared variables, business dimensions, visible axes, scenario identities, so
 and mappings are present and verified. Imported values and forecast assumptions stay
 distinguishable, and copied outputs never stand in for editable logic.
 
-Saved statements and views reconcile to their supported source values, or list the exact
-discrepancies that remain.
+Reconciliation checks compare saved statements and views with their supported source values;
+the handoff names the exact discrepancies that remain.
 
 The handoff names what you imported, what you rebuilt, which assumptions are provisional, which
 source defects you corrected, what is unmapped, and what is still open, and it keeps person-level

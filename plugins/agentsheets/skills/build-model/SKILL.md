@@ -1,6 +1,6 @@
 ---
 name: build-model
-description: Build, change, or diagnose a model and model the business in it. Use for variables, formulas, dimensions, mappings, time, rollups, table layouts, comparisons, formatting, and unexpected results; for forecasts, budgets, plans, and scenarios; for headcount, payroll, and rosters; for bookings, pipeline, and deal registers; and for statements, cash and runway, budget versus actuals, and unusual results.
+description: Build, change, or diagnose a model and model the business in it. Use for variables, formulas, dimensions, mappings, time, rollups, table layouts, comparisons, formatting, and unexpected results; for forecasts, budgets, plans, and scenarios; for headcount, payroll, and rosters; for bookings, pipeline, and deal registers; and for statements, receivables and collections, cash and runway, budget versus actuals, and unusual results.
 ---
 
 # Build the model
@@ -103,7 +103,7 @@ Inside a `where` clause a plain name reaches only the candidate's own key, so a 
 does not carry is read through that key, and a text variable compared with `this.<Dimension>` there
 compares the member's name. A predicate value is an expression, so a bracket can name a computed
 date: `Date.Month = startofmonth(`Last Snapshot Month`$)`. A condition on another dimension keeps
-the drilled coordinate: `sum(Amount[Account Type = "Income"])` broken down by Account gives each
+the drilled coordinate: ``sum(Amount[`Account Type` = "Income"])`` broken down by Account gives each
 account its own amount, while `sum(Amount[Account in {"A", "B"}])` broken down by Account repeats
 one total on every row, because the bracket replaces the cell's Account. A dimension reference reads
 a value, not the cell's grain: with Deal absent from the cell's coordinates, `Deal` can still
@@ -134,8 +134,9 @@ Imported records and sources.
 
 ### Time
 
-System Date generates a table's periods inside its window, so forecast periods exist before data
-does; a source date shown as a field is not the report calendar.
+System Date generates a table's periods inside its window, so forecast periods exist before data does; a source date shown as a field is not the report calendar.
+
+Fiscal-year labels name different calendar months under different conventions. The person's own month labels and the dates that already hold the figures the person is giving establish their convention. Repeating those figures under a fiscal-year label describes the same months.
 
 Rules compute at the model's base grain, usually the month. Day, week, month, quarter, half-year,
 and year are distinct grains, and a Date condition matches the grain being calculated: `Date` is the
@@ -157,8 +158,7 @@ in a closed period uses Actuals-range rules. Changing Last close changes other r
 requested periods are covered with rules and disclosed estimates, and an estimate is presented as
 one.
 
-Comparison values are presentation. When downstream formulas need a difference as model state, make
-it a modeled variable with an explicit calendar offset, `Revenue[Date.Month =
+Comparison values are presentation. When downstream formulas need a difference as model state, make it a modeled variable with an explicit calendar offset, `Revenue[Date.Month =
 dateadd(this.Date.Month, -12, "month")]`; a moving window is one range with inclusive, possibly
 relative, endpoints, `average(Revenue[Date.Month in [-3]:[-1]])`.
 
@@ -306,7 +306,7 @@ table exists to show. The plain read answers only for months that have a row; ca
 observation into later months is the carry-forward default, disclosed as an assumption, and where
 the Actuals and Forecast ranges split changes none of that. A connected roster whose template
 declares its record key and observation date lands each numeric field with that default already
-written: `[Employee ID in any]` reads the period's latest observation and carries the prior period's
+written: ``[`Employee ID` in any]`` reads the period's latest observation and carries the prior period's
 value when the period has none, and `[]` sums the employees' record values, so a monthly table and a
 company total need no rule of their own.
 
@@ -453,14 +453,12 @@ A Canvas simulator shows one scenario at a time unless cross-scenario Canvas rea
 
 ## What a saved value proves
 
-The calculated readback tells a no-data blank from a numeric zero. A write receipt whose `status` is
-`applied`, with its `changed` counts and readback, proves the change, and the receipt states what
-the write replaced, tied, or refused, so the next call can be shaped from it. When a receipt cannot
-prove the outcome, the saved table is read at meaningful starting and later periods, business
-segments, and coarser grains. Verify a saved read on system Date at the requested grain with a
-member whose state changes inside the window: a start, an end, a rate change, a different currency.
-A member that never changes cannot reveal a wrong read, and an undated total cannot prove the
-projection.
+The calculated readback tells a no-data blank from a numeric zero. A write receipt whose `status` is `applied`, with its
+`changed` counts and readback, proves the change, and the receipt states what the write replaced, tied, or refused, so
+the next call can be shaped from it. When a receipt cannot prove the outcome, the saved table is read at meaningful
+starting and later periods, business segments, and coarser grains. Verify a saved read on system Date at the requested
+grain with a member whose state changes inside the window: a start, an end, a rate change, a different currency. A
+member that never changes cannot reveal a wrong read, and an undated total cannot prove the projection.
 
 A saved value proves that the rule computes at those coordinates; a member whose value follows from
 its own record, a salaried member's full month equal to its rate divided by twelve, proves the
@@ -618,21 +616,21 @@ allocations while payroll follows paid employment, and the two can differ in tim
 ## Where cash lands
 
 Collection and payment timing connect operating activity to cash. Working capital, inventory,
-spending, debt, and financing follow commitments and disclosed assumptions, with real payment terms
-and material customer concentration kept. A projected balance is an opening balance plus dated
-movements; when opening cash is unknown, an editable opening assumption stands in, disclosed, and
-the runway that follows is conditional on it. Negative cash stays visible, and committed financing
-stays apart from a planned raise.
+spending, debt, and financing follow commitments and disclosed assumptions, preserving real payment
+terms and material customer concentration. Projected cash is opening cash plus dated movements.
+Unknown opening cash uses a disclosed, editable assumption, making the runway conditional on it.
+Negative cash stays visible, and committed financing stays apart from planned raises.
 
-A cash review answers how long the current plan can fund the business and which decisions could
-change that answer. It establishes the cash balance's date, currency, restrictions, and the
-forecast scenario, then reads the dated cash projection for the first period that crosses the
-company's minimum cash requirement, or zero when the question is exhaustion; a forecast that never
-crosses that level supports a statement about its covered horizon. The outlook connects to
-collections, hiring, committed spending, and financing, showing which decisions have the largest
-supported effect and when their cash impact begins. The delivery is the cash basis, the projected
-constraint date or covered horizon, the consequential assumptions, and the decisions requiring
-attention; a missing starting balance leaves a conditional answer whose missing inputs are named.
+Accounting systems such as QuickBooks, Xero, and NetSuite record invoice payments. A positive open
+balance past its due date is overdue. Register or CRM statuses can lag payments, so a collections list
+uses current invoice balances from connected books; otherwise, its stated basis is the register's status and due date.
+
+Cash reviews start with the balance's date, currency, restrictions, and forecast scenario. The
+dated projection shows the first period below the company's minimum cash requirement, or zero for
+exhaustion; without a crossing, the answer covers only its horizon. Collections, hiring, committed
+spending, and financing show the largest supported effects and their timing. Delivery names the
+cash basis, constraint date or horizon, consequential assumptions, and decisions needing attention;
+missing starting cash leaves a conditional answer with its missing inputs named.
 
 ## Statements
 
@@ -719,9 +717,11 @@ differences.
 An anomaly is a claim about calculated financial results against a baseline, and a company history
 without an approved budget is a fine baseline. An all-clear is a real finding that covers only the
 scope and evidence checked: totals and reconciliations need observed coverage of their periods and
-members, and partial evidence supports a narrower finding while the rest stays open. Operating
-expense and cost of revenue are the default scope of an unspecified spend check; a named scope is
-the scope. Payroll cadence, non-operating entries, intercompany transfers, credits, and eliminations
+members, and partial evidence supports a narrower finding while the rest stays open. A zero difference between two
+figures built from the same saved rows proves the model's arithmetic; a tie to a source compares the model's figure
+with a total the source system reports independently (its P&L, trial balance, or account balance). Operating expense
+and cost of revenue are the default scope of an unspecified spend check; a named scope is the scope.
+Payroll cadence, non-operating entries, intercompany transfers, credits, and eliminations
 each mean something different and are read as their own cases. The finding reports observed and
 expected amounts, the date the data reaches, supported drivers, and hypotheses labeled as such; a
 scheduled briefing compares with the last successful one and saves a dated page only when something

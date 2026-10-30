@@ -14,6 +14,18 @@ an onboarding build, shows the business as a system: its outcome over time and t
 move it most. An explanatory visual makes evidence easier to compare. A simulation makes business
 choices directly manipulable.
 
+An application's prose is a line or two on its purpose and use. In a written report or
+explanation the person requested, prose is the deliverable: its findings, evidence,
+qualifications, and next actions. The figure shows its available numbers, labels, and controls.
+When an unresolved item could change a number, the figure names that item in a short label
+beside the number. The Ari chat session is the sole home for Ari's authoring notes: source
+coverage, reconciliation and verification status, estimate and forecast sources and assumptions,
+evidence limits, a preview's scope, what it changed and when, and handoff or resume instructions.
+Estimate and forecast disclaimers and the possible effects of unresolved items are part of
+that chat account. A status that is data
+the person works with belongs in a table column. A delegated writer returns the chat details
+to Ari in its report.
+
 The design bar is a finely made print graphic that the reader can handle: Tufte's clarity of
 quantitative evidence, the composition and typesetting of an editorial infographic, and Bret
 Victor's immediacy of action and consequence. The shared product theme supplies the visual language.
@@ -109,14 +121,9 @@ the sandbox's data, theme, state, and event interfaces once beside the requested
 The source field keeps the component signature and common layout props available throughout the work.
 
 At a narrow width, responsive geometry, focus on a selected object, or readable bounded scrolling
-keeps the useful choice and its immediate consequence together. The words on a block are its
-business question, the labels at its marks, the values, and how to use its controls. Everything
-said about the work itself lives in the Ari chat session: estimate and forecast disclosures, their
-sources and assumptions, authoring checks, a preview's scope, and what a number is not. A delegated
-writer returns those details to Ari in its report.
-The host supplies the boundary and inset, so begin
-with a transparent, unbordered field. Containers express real groups, states, or interactive
-boundaries. The shared design system supplies coherence; the business supplies the distinctive
+keeps the useful choice and its immediate consequence together. The host supplies the boundary
+and inset, so begin with a transparent, unbordered field. Containers express real groups, states,
+or interactive boundaries. The shared design system supplies coherence; the business supplies the distinctive
 composition. Move an existing block rather than recreating it.
 
 ## A business on one page
