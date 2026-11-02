@@ -14,6 +14,8 @@ A workspace has one shared model, and tables are views over it. This skill expla
 - **Object deletion options**: Before deleting a shared variable or dimension, inspect dependency impact and offer **Cancel** and **Delete completely** (plus **Keep with Ari** when Ari can start a new chat, which inspects the scenario, asks for a destination, and places the preserved object before removal). System `Date` cannot be deleted.
 - **Parallel tool execution**: Tool calls in one turn run concurrently. Sequence dependent calls across steps or bundle the table and its rules into one `edit_table_blocks` `create` call.
 
+When the person chooses a rule over an imported one, the import's summary page records the affected table, the chosen rule, and why it differs from the file. Its saved text names the source file's `runway-file-…` ID. Later file updates read that page to preserve the decision.
+
 ## The picture
 
 Consider a monthly model for a listening service selling two tiers (`Lark`, `Chorus`) across two territories (`Southgate`, `Eastmere`). Five concepts govern how the engine calculates it.
@@ -52,6 +54,8 @@ A cell is one variable at one member of each of its dimensions (plus one period 
 
 ### A breakdown
 
+A request phrased as "if X, then use Y" defines a standing rule. A default formula at the relevant dimension level (`child_defaults`) keeps that rule true for current and future rows, including accounts or vendors added later.
+
 - **Leaf rules & automatic parent sums**: Nesting dimensions under a variable creates a breakdown (`Paying listeners` by `Listening tier`, then `Territory`). Writing `child_defaults` on the deepest dimension defines the leaf formula; saving the table automatically generates `level_default_sync` rules that sum each level into its parent (`Territory` into `Listening tier`, and tiers into the variable total).
 - **Percentage breakdowns (`PERCENTAGE`)**: Variables with `format: "PERCENTAGE"` are never summed across children and receive no `0` leaf fallback:
   - When a leaf formula's inputs all exist on the parent row (such as `Profit / Revenue`), the parent row automatically evaluates that formula on the parent's totals.
@@ -65,6 +69,7 @@ A cell is one variable at one member of each of its dimensions (plus one period 
 - **Base grain & time rollups (`rollup`)**: Dated rules evaluate at the model's base grain (usually `Month`). Coarser columns (`Quarter`, `Half-year`, `Year`) are filled by the variable's time rollup:
   - `SUM` (default for monthly numbers): Flows such as revenue or expenses.
   - `LAST`: Balances and counts such as cash, weekly listeners, or headcount (update via `set_time_rollup` on existing variables).
+    An annual amount, price, rate or share held constant each month rolls up with `LAST`; recurring monthly revenue and expenses use `SUM`.
   - `AVERAGE`: Period means.
   - **Dateless ratio formulas**: A row `formula` written with no `Date` condition evaluates directly at every time grain without a rollup, keeping ratios accurate in quarters and years.
 - **`Last close` boundary**: `Last close` separates closed `Actuals` periods from `Forecast` periods across the scenario. Write rules in `Forecast` for known events after close, and write disclosed estimates in `Actuals` when estimating closed periods without shifting `Last close` for other reports.
@@ -168,7 +173,11 @@ sum(Amount$[Account.Bucket = this.Bucket, Date.Month = this.Date.Month])
 - **Target scenario selection**: Turn context reports both the scenario currently in view (`scenario`) and `workspace_default` (the plan of record). If a user asks for new pages or tables without naming a scenario while viewing a non-default scenario, state in your first sentence which scenario receives the work (or ask before writing).
 - **Forecast-only levers & scenario comparisons**: To move only the forecast in a scenario, override dated `Forecast` cells or an input read only by `Forecast` rules (timeless inputs read by all periods move history too). Use `comparison: "none"` with `formula_origins: "all"` to inspect comparison rules.
 
-## What a saved value proves
+## Checking sources and disclosing corrections
+
+Answers to open items and exceptions usually live in the tabs of attached workbooks and in connected source records. An item needs the customer's input only when those sources leave a specific business question unanswered.
+
+When a finding contradicts a saved model value, the answer names that value, its table, variable, any dimension items, period (when dated), and the corrected value. This identifies the remaining model change, including when another chat saved the original.
 
 - **Readback verification**: A write receipt with `status: "applied"` proves what changed, replaced, tied, or failed. Verify dated calculations on system `Date` across starting, middle, and ending periods using a member whose state changes inside the window (a hire start, termination, rate change, or FX conversion) plus coarse period rollups.
 - **Tracing discrepancies & driver sensitivity**: Compare calculated record cells against source facts (for example, a salaried employee's full month equals annual rate divided by 12). When testing driver sensitivity in Main, remember that an input edit is a live save and must be restored if temporary.
@@ -176,18 +185,19 @@ sum(Amount$[Account.Bucket = this.Bucket, Date.Month = this.Date.Month])
   - **Use only necessary time grain**: Prefer monthly or yearly queries and formulas when daily grain does not change the answer.
   - **Write general formulas**: Reference `Date` and `this.<Dimension>` rather than duplicating rules per year or item.
   - **Share expensive expressions**: Extract repeated sub-expressions into helper variables when doing so reduces calculation time.
-  - **Ingest large record sets as sources**: Load large tables of fixed values (history, rosters, transaction lists) via `edit_integrations` `ingest_csv` and aggregate them with one rule rather than writing hundreds of cell rules (check `variable_rules` counts on write receipts).
+  - **Large record sets as sources**: Connected warehouse rows use a saved query on that connection and refresh with each sync. `edit_integrations` `ingest_csv` loads CSV files whose records no connection holds as warehouse rows; source changes require another upload. One aggregate formula over a source replaces hundreds of cell rules.
 
 ## Modeling the business
 
 ### Structure, coordinates, and controls
 
-- **Simulation scope & horizon**: A full model build connects revenue, costs, staffing, and cash across the horizon (defaulting to 12 months of history and 24 months of forecast) with Base, Upside, and Downside scenarios, pages, a closing simulator, and a walkthrough. Segment variables by the dimensions where economics differ (plan, segment, region, SKU, currency).
-- **Records, placeholders, and controls**: Represent people, customers, and deals as keyed records grounded in connected data, files, or cited company evidence, filling gaps with role-named placeholders (`Software Engineer 2`) or cohorts reconciled to stated totals. Place shared editable drivers (growth, pricing, churn, hiring pace, payment terms) on one controls page that drives downstream outputs and the closing simulator.
+- **Simulation scope, horizon, and from-scratch depth**: A full model build connects revenue, costs, staffing, and cash across the horizon (defaulting to 12 months of history and 24 months of forecast) with Base, Upside, and Downside scenarios, pages, a closing simulator, and a walkthrough. Segment variables across the dimensions where unit economics, pricing, margins, or timing differ (plan, segment, region, channel, SKU, department, currency). When building from scratch without connected sources, deliver this same full dimensional and operational simulation grounded in company research and industry benchmarks rather than a simplified overview.
+- **Lumpy, time-based events over smooth curves**: Where reasonable across all model builds, model discrete, time-based events with adjustable dates and quantities as keyed records or scheduled items rather than approximating flows with smooth curves or flat averages. Shifting an event's date input (an individual hire or hiring cohort start date, a facility or data center build-out, an equipment purchase, a contract start, or a financing tranche) must automatically shift the resulting payroll, capex, revenue, and cash flows across periods.
+- **Records, placeholders, and controls**: Represent people, hiring cohorts, customers, contracts, deals, and major capital commitments as keyed records grounded in connected data, files, or cited company evidence, filling gaps with role-named placeholders (`Software Engineer 2`), hiring cohorts, or customer cohorts reconciled to stated totals. Place shared editable levers (event dates, growth, pricing, churn, hiring timing, payment terms) on one controls page that drives downstream outputs and the closing simulator.
 
 ### Revenue and pipeline
 
-- **Revenue schedules**: Model revenue by how the business earns it: recurring-revenue schedules track opening customers, additions, churn, ending customers, and ARPU; transaction, marketplace, and contract models follow unit economics and recognition terms. Keep bookings, recognized revenue, billing, and cash collection distinct.
+- **Revenue schedules**: Model revenue by how the business earns it: recurring-revenue schedules track opening customers, additions, churn, ending customers, and ARPU; transaction, marketplace, and contract models follow unit economics and recognition terms; commercial step changes (enterprise contract starts, pricing changes, product or market launches) trigger from their scheduled dates. Keep bookings, recognized revenue, billing, and cash collection distinct.
 - **Pipeline & deal registers**: Separate deals into three distinct measures by state and governing date:
   - **Bookings (won deals)**: Placed in the month the deal closed.
   - **Open pipeline / Weighted pipeline (open deals)**: Placed in the expected close month (weighted at the deal leaf via `Amount * Probability`, summed above).
@@ -196,10 +206,20 @@ sum(Amount$[Account.Bucket = this.Bucket, Date.Month = this.Date.Month])
 
 ### Costs and staffing
 
-- **Cost drivers**: Separate Cost of Revenue (delivering the sold product/service) from Operating Expenses (R&D, S&M, G&A) per company policy. Drive variable costs by their operational unit (transactions, users, compute, headcount) rather than flat revenue percentages when unit drivers exist.
-- **Headcount & payroll plans**: Deliver both a current-state roster and a monthly staffing table keyed by `Employee ID`:
-  - **Headcount**: Each employee contributes `1` in months employed (by default, any month between start and termination inclusive) and `0` otherwise.
-  - **Compensation**: Estimate pay only as a role-level rate each employee row reads, reserving person-level pay for sourced or user-supplied facts and explaining estimates in your reply. Convert annual (`Annual Pay / 12`), monthly, or hourly rates (with disclosed hours), prorating partial months, adding taxes/benefits, and keeping contractors, unpaid founders (`0`), uncategorized departments, and currencies explicit.
+- **Operating costs & lumpy capital commitments**: Separate Cost of Revenue (delivering the sold product/service) from Operating Expenses (R&D, S&M, G&A) per company policy, driving variable costs by their operational unit (transactions, users, compute, active capacity, headcount) rather than flat revenue percentages. Where capital expenditures or major operating outlays occur in discrete steps (such as data center or facility build-outs, hardware clusters, tooling runs, or major vendor contracts), model each project or phase as a dated item with an adjustable date and cost schedule rather than smoothing capex into a flat average:
+
+```formula
+if(`Build Date` <> null and startofmonth(`Build Date`) = Date.Month, `Project Capex`, 0)
+```
+
+- **Headcount & payroll plans**: Deliver both a current-state roster and a monthly staffing table keyed by `Employee ID` (or hiring cohort):
+  - **Timing-driven headcount and payroll**: Drive changes in headcount and payroll costs from the editable start and termination dates of individual employees, planned hires, or hiring cohorts—never by applying a smooth percentage growth curve to aggregate payroll. Each row's active `Headcount` is `1` (or the cohort headcount on a cohort row) in months employed (by default, any month between start and termination inclusive) and `0` otherwise, and monthly pay scales by `Headcount` and prorates partial start or termination months by active days so moving a hire date immediately shifts headcount and payroll cost:
+
+```formula
+if(`Start Date` <> null and startofmonth(`Start Date`) <= Date.Month and (`End Date` = null or startofmonth(`End Date`) >= Date.Month), Headcount * (`Annual Pay` / 12) * (datedif(if(`Start Date` > Date.Month, `Start Date`, Date.Month), if(`End Date` <> null and `End Date` < eomonth(Date.Month, 0), `End Date`, eomonth(Date.Month, 0)), "D") + 1) / daysin(Date.Month, "month"), 0)
+```
+
+- **Compensation**: Estimate pay only as a role-level rate each employee row reads, reserving person-level pay for sourced or user-supplied facts and explaining estimates in your reply. Convert annual (`Annual Pay / 12`), monthly, or hourly rates (with disclosed hours), prorating partial months, adding taxes/benefits, and keeping contractors, unpaid founders (`0`), uncategorized departments, and currencies explicit.
 
 ### Cash and financial statements
 

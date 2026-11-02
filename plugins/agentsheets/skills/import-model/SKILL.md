@@ -50,5 +50,10 @@ A workbook presents its visible sheets. A rebuild of the workbook covers the vis
   2. **Shared foundation step**: Create the `Date` axis, Last close, dimensions, mappings, scenarios, and saved source-map summary (no sheet tables).
   3. **Area build steps (`verify: true`)**: One step per business area (or sequential per-section steps for oversized sheets) that builds the area's tables and reconciles them against the source. If an area needs numbers from another area not yet built, load the workbook's values as temporary inputs and note them.
   4. **Cross-area tie-out step (`verify: true`)**: Replace temporary cross-area inputs with live variable references and verify cross-sheet links, statement identities, cash recurrence, and scenario behavior.
-- **Updating from a newer workbook version**: When a newer attachment arrives, compare it section by section against the prior attachment ID in the source map. Build newly added sections, remove or retire deleted sections, update changed tables/formulas, reload changed CSV source tables, preserve cfo.ai edits in unchanged sections, re-reconcile changed sections, and update the source map's attachment ID.
 - **Handoff summary**: State what was imported, what was rebuilt, provisional assumptions, corrected source defects, unmapped items, and any remaining discrepancies.
+
+### Updating from a newer workbook version
+
+A version update compares each section with the prior attachment in the source map. Added and removed sections, changed tables or formulas, and changed CSV source tables are reflected in the model. Edits in unchanged sections and rules the person deliberately chose over the file stay in place, including in changed sections.
+
+Reconciliation and the update report distinguish preserved choices from unexplained differences. The saved summary retains those choices, and its source map names the new attachment.
