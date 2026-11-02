@@ -5,171 +5,70 @@ description: Build, change, or diagnose a model and model the business in it. Us
 
 # Build the model
 
-A workspace has one model; tables are views of it. This skill explains calculation with a running
-example, then covers imported records, mappings, rules, and modeling the business: revenue,
-costs, staffing, cash, and statements.
+A workspace has one shared model, and tables are views over it. This skill explains calculation with a running example, then covers imported records, mappings, rules, and modeling the business (revenue, costs, staffing, cash, and statements).
 
 ## The model and its views
 
-A variable's name, formulas, and values are the model, shared by every table that shows it.
-Ordering, formatting, and the breakdown a table shows are the view, owned by that table. A change to
-an existing table keeps its block identity and edits it in place; a copy on another page is a
-separate block with the original left alone.
-
-A readable name identifies an object only together with its identity: two variables can carry one name, and the token an inspection or receipt prints, such as `Headcount#7d3`, names exactly one. A plain name that matches an existing variable shows it and adds only where it holds nothing, and a save that would replace what it holds is refused whole; a row that carries its token writes it, and that rule
-replaces the one every table reads. The existing object is the one to reuse when it is the one the request means; a requested report keeps the names the request gives its variables, even when an unrelated object already has such a name (`new: true` on the create), and keeps the shape the request spells out: breakdown dimensions in the order listed, each listed field a column. A different name or shape is a
-different deliverable. Saved data, research, supplied numbers, and disclosed assumptions all build, and the missing variables and dimensions the work needs are yours to create.
-Variables and dimensions share saved table appearances. Before final removal of a deletable object, inspect dependency impact, then offer Cancel and Delete completely, even without dependents. Offer Keep with Ari only when Ari can accept a new chat. Cancel makes no changes. **Keep with Ari** cancels
-deletion: inspect the captured scenario, ask for a destination, then place the same object before removal. Preserve its identity, formulas, values and items. The built-in Date dimension remains available without an axis and cannot be deleted. Inspection's `location` grants no ownership.
-Tool calls in one turn run at the same time, so a call that needs another's result, a variable a
-create makes or a member an update adds, waits for it, and one create carries a table with its rules.
+- **Shared variables vs. table views**: Variable names, formulas, and values belong to the shared model; row order, formatting, and breakdowns belong to each table block.
+- **Reusing vs. creating variables**: Plain names on `create` reuse an existing variable and write only where empty; `#hex` tokens overwrite shared rules, and `new: true` creates a distinct variable when a requested report reuses an existing name for a different concept.
+- **Object deletion options**: Before deleting a shared variable or dimension, inspect dependency impact and offer **Cancel** and **Delete completely** (plus **Keep with Ari** when Ari can start a new chat, which inspects the scenario, asks for a destination, and places the preserved object before removal). System `Date` cannot be deleted.
+- **Parallel tool execution**: Tool calls in one turn run concurrently. Sequence dependent calls across steps or bundle the table and its rules into one `edit_table_blocks` `create` call.
 
 ## The picture
 
-The running example is a listening service. It sells two tiers, Lark and Chorus, in two territories,
-Southgate and Eastmere, and is modeled month by month. Five ideas carry the engine.
+Consider a monthly model for a listening service selling two tiers (`Lark`, `Chorus`) across two territories (`Southgate`, `Eastmere`). Five concepts govern how the engine calculates it.
 
 ### A cell
 
-A cell is one variable at one member of each of its dimensions, and at one period when the variable
-is dated. Paying listeners for Chorus in Eastmere in March 2027 is one cell. Tier fee for Chorus is
-a timeless cell: it has a tier and no month. A table shows some of a variable's cells; the cells
-exist wherever the variable's rules and inputs reach.
+A cell is one variable at one member of each of its dimensions (plus one period when dated). `Paying listeners` for `Chorus` in `Eastmere` in `March 2027` is one dated cell; `Tier fee` for `Chorus` is a timeless cell. Tables display selected cells, while rules and inputs define cells wherever they reach.
 
 ### A rule and an input
 
-A cell holds a literal input or a formula. An input is a supplied fact or a chosen assumption,
-and its cell is the customer's control: an opening count, fee, or growth rate. A formula calculates
-from inputs at each cell's coordinates and keeps its dependencies even when today's answer is constant.
-Its condition names the Date grain: a Month rule reaches additional business dimensions at Month;
-a daily forecast needs matching Day coverage, and time conversions are explicit calculations.
-Actuals and Forecast are separate range choices. The saved scope and selected rule explain coverage;
-a literal such as months in a year is part of the rule. A typed input is a saved rule of its own at its cell's coordinates, and the calculation evaluates every rule a variable holds, so a grid of typed values is as many rules as it has cells.
-
-A forecast reads earlier cells. A dated input carries forward through an opening cell and a
-default formula for later periods, so every later month depends on the assumption. Repeated literals
-would create independent overrides. Weekly listeners grow from an opening input:
+- **Inputs vs. formulas**: A cell holds either a literal input (an opening count, fee, or growth rate that the operator controls) or a formula calculated at each cell's coordinates. Typed grid values save one rule per cell, so use formulas for calculated series rather than grids of repeated literals.
+- **Date grain & range (`Actuals` vs. `Forecast`)**: A formula's condition sets its `Date` grain (a `Month` rule reaches dimensions at `Month`; a daily forecast requires `Day` coverage). `Actuals` and `Forecast` have separate rule slots; write both when a formula applies across the whole horizon.
+- **Opening seeds & recurrences (`[-1]`)**: Seed dated assumptions in the last `Actuals` month and carry them forward with a `Forecast` formula so every future month responds to the assumption:
 
 ```formula
 `Weekly listeners`[-1] * (1 + `Listener growth`$[Territory = this.Territory])
 ```
 
-In the first Forecast month, `Weekly listeners[-1]` is the last Actuals month, so it reads that
-month's input, imported value, or Actuals rule; with none of them it reads 0, and every later month
-compounds from 0. A model with no connected actuals seeds the opening input in its last Actuals
-month. For cash, the opening cell holds the starting amount and the default adds Net Cash Flow to
-the prior balance. A recurrence reads its previous period's modeled value: its selected rule, or the
-source or zero fallback. An estimated opening stays distinct from observed history, and a legitimate
-zero, such as payroll before a hire starts, stays zero.
-
-An intentional one-cell override pins that cell and nothing else; removing it lets the default's
-value flow into parents and rollups, so the neighboring periods and parents are what to read
-afterward.
-
-An empty read has one rule. An aggregate over no matching cells returns that function's empty
-result: `sum` and `product` 0, `min`, `max`, and `average` null. A variable cell with no rule and no
-input reads null for a date or text and 0 for any other type, so an End Date nobody entered is null,
-and `End Date = null` is true there. A blank imported number is null in the source; a SUM variable
-over a record whose rows are all blank reads 0, so `count` over that variable counts the cell, while
-`last(<column>)` over the same rows reads null and `count(<column>)` on the raw column counts no
-blank. `a = null` asks
-whether a value is missing; `a = b` is null when either side is missing, so `if` takes its false
-branch, and an unassigned group matches two missing attributes with `(a = null and b = null) or a =
-b`. A ratio states its error fallback, ``iferror(`Listening revenue` / `Paying listeners`, NULL)``.
+- **How `[-1]` resolves at the boundary**: In the first `Forecast` month, `Weekly listeners[-1]` reads the last `Actuals` month's input, imported value, or `Actuals` rule (or `0` if none exists). For cash, seed opening cash in the last `Actuals` month and add `Net Cash Flow` to the prior balance in `Forecast`.
+- **Single-cell overrides**: A one-cell override pins only that coordinate; removing it restores the default formula and updates parent and period rollups.
+- **Empty & null semantics**:
+  - Unset variable cells read `null` for date/text types (`End Date = null` is true) and `0` for numeric types.
+  - Blank imported numbers are `null` in the raw column (`last(<column>)` is `null`; `count(<column>)` skips blanks), whereas a `SUM` variable over all-blank rows evaluates to `0` (`count` on the variable counts the `0`).
+  - `a = null` tests for missing values. Because `a = b` evaluates to `null` (falsy in `if`) when either side is `null`, match two nullable attributes with `(a = null and b = null) or a = b`.
+  - Wrap ratios in `iferror` (e.g., ``iferror(`Listening revenue` / `Paying listeners`, NULL)``); see `## Formula syntax reference` (`### Functions`) for `sum`/`product` (`0`) vs. `min`/`max`/`average` (`null`).
 
 ### A read
 
-A formula runs at one cell, and a plain name reads the other variable at that same cell: the same
-tier, the same territory, the same month. That is the read to want when both variables share the
-cell's coordinates. Listening revenue on the Chorus × Eastmere × March cell reads Chorus × Eastmere
-× March paying listeners.
-
-An input with fewer coordinates has no value there. Weekly listeners is saved by Territory and
-Month, so the Chorus × Eastmere × March cell asks it for a Chorus value it never had, and the read
-gets the generated 0. An absolute reference, `$`, keeps only the coordinates it names, so the read
-pins the ones the input carries: `` `Weekly listeners`$[Territory = this.Territory, Date.Month =
-this.Date.Month] ``. A timeless input has no month at all, so a monthly rule reads it pinned by its
-own keys, `` `Tier fee`$[`Listening tier` = this.`Listening tier`] ``. An absolute read that
-identifies a record names every dimension the input carries, and one that drops a dimension combines
-whatever records share the ones that remain.
-
-A bracket changes a coordinate and keeps the rest: `` `Listening revenue`[Territory = "Eastmere"] ``
-reads Eastmere instead of this cell's territory, and ``sum(`Listening revenue`[Territory in any])``
-adds every territory at this cell's tier and month. Outside a `where`, the plain name of a dimension
-the cell carries is the cell's own member, so ``[`Employee ID` = `Employee ID`]`` and ``[`Employee
-ID` = this.`Employee ID`]`` are the same read.
-
-Inside a `where` clause a plain name reaches only the candidate's own key, so a field the candidate
-does not carry is read through that key, and a text variable compared with `this.<Dimension>` there
-compares the member's name. A predicate value is an expression, so a bracket can name a computed
-date: `Date.Month = startofmonth(`Last Snapshot Month`$)`. A condition on another dimension keeps
-the drilled coordinate: ``sum(Amount[`Account Type` = "Income"])`` broken down by Account gives each
-account its own amount, while `sum(Amount[Account in {"A", "B"}])` broken down by Account repeats
-one total on every row, because the bracket replaces the cell's Account. A dimension reference reads
-a value, not the cell's grain: with Deal absent from the cell's coordinates, `Deal` can still
-resolve a source or mapped value there, so `Deal = null` tests the value and cannot tell a parent
-from a record row. A dimension attribute read at a cell with no source row is null. Formulas use
-readable names, with the returned `grammarRef` for backticks or disambiguation.
+- **Relative reads (same coordinates)**: A plain variable name reads that variable at the current cell's exact coordinates (same tier, territory, and month).
+- **Absolute reads (`$`) for coarser inputs**: If an input has fewer dimensions than the current cell (for example, `Weekly listeners` by `Territory` and `Month`, with no `Listening tier`), a relative read at `Chorus × Eastmere × March` finds no `Chorus` value and returns `0`. Pin only the coordinates the input carries with `$`:
+  - Dated 1D input: `` `Weekly listeners`$[Territory = this.Territory, Date.Month = this.Date.Month] ``
+  - Timeless 1D input: `` `Tier fee`$[`Listening tier` = this.`Listening tier`] ``
+- **Coordinate overrides (`[...]`)**: Brackets replace specified coordinates and keep the rest: `` `Listening revenue`[Territory = "Eastmere"] `` reads Eastmere at this cell's tier and month, and ``sum(`Listening revenue`[Territory in any])`` sums all territories at this cell's tier and month. Outside `where`, `Dimension` and `this.Dimension` are equivalent.
+- **Inside `where` clauses**: Inside `where`, a plain name refers to the candidate record's key, while `this.<Dimension>` refers to the current cell's member. Predicate values accept expressions such as `Date.Month = startofmonth(`Last Snapshot Month`$)`.
+- **Keeping vs. replacing drilled coordinates**: Filtering a second dimension keeps the row's drilled coordinate (``sum(Amount[`Account Type` = "Income"])`` broken down by `Account` shows each account's amount), whereas filtering `Account` itself (`sum(Amount[Account in {"A", "B"}])`) replaces the row's account and repeats the combined sum on every row.
 
 ### A breakdown
 
-Nesting dimensions beneath a variable makes a breakdown: Paying listeners by Listening tier, then
-Territory. Its leaves are the cells where every broken-down dimension has a member, and they
-compute: paying listeners are weekly listeners times the uptake rate. The leaf rule is the
-`child_defaults` entry for the deepest dimension, written once for every leaf and saved on the
-leaf's full path; with no leaf rule the leaves hold inputs. The table's save then gives each level
-above the leaves a default that sums the level beneath it, so each tier adds its territories and the
-total adds its tiers, and the write receipt lists them. Where no rule computes a number variable's
-leaves, they get a saved rule of 0 that each typed number overrides, so a blank leaf reads 0 and
-counts as 0 in the totals. A value set on any leaf's row reaches every total above it.
-
-A level needs a rule of its own only when adding the children is the wrong arithmetic; that rule
-takes the place of the sum there. A variable whose `format` is PERCENTAGE is not added up, and its leaves get no rule of 0. A leaf rule on it computes the leaves alone, and the save gives each row above them a default of its own: the leaf formula, read on the row's own inputs, where everything it reads has a value on that row, so a margin there is total profit over total revenue; and a blank in each range where a leaf holds a typed-in rate (one saved with no range counts in Actuals and Forecast), where several formulas compute the leaves, or where the leaf formula reads a variable with no value on that row or takes its own row's item of a dimension that row lacks (`this.Segment` above the segments), since no rate for the whole follows from them without weights. A read that names its item, `Rate[Segment = "Enterprise"]`, or every item, `sum(Revenue[Segment in any])`, needs no Segment from the row; it takes the row's other dimensions with it, and the row gets the formula where the variable has a value in that cell. A percentage written as the row's `formula` is one rule that computes every row, the rows above the leaves included, so the save adds no default there: a typed-in rate it reads is blank above the leaves and counts as 0, so `Profit / Revenue - Rate` shows the margin alone on those rows. A row's `numberFormat` on one table is display only, and the variable keeps its sums. A rule whose inspection shows `writer: "level_default_sync"` belongs to the product and follows the tables, so a layout save can replace it; a save's receipt lists those changes under `level_defaults`, and they are not a change to anything a person authored. Revenue per payer is total revenue over total paying listeners,
-not a sum of rates, and a ratio of two variables that already combine is right at every level with
-no breakdown rules at all: ``iferror(`Listening revenue` / `Paying listeners`, NULL)``, written as
-the row's `formula` with no Date, reads each cell's revenue and paying listeners at that cell, a
-quarter's or a year's included. A grouped header column, such as Territory over its months, combines its children as the `summary` on the column beneath it says: `SUM` adds them, and `NONE` keeps the row's own value at the header, so a ratio there reads total revenue over total paying listeners. A drill-down over a record key, weighted pipeline by Stage, Owner,
-and Deal, has a leaf that pairs each deal's amount with its probability; the pattern is under
-Imported records and sources.
+- **Leaf rules & automatic parent sums**: Nesting dimensions under a variable creates a breakdown (`Paying listeners` by `Listening tier`, then `Territory`). Writing `child_defaults` on the deepest dimension defines the leaf formula; saving the table automatically generates `level_default_sync` rules that sum each level into its parent (`Territory` into `Listening tier`, and tiers into the variable total).
+- **Percentage breakdowns (`PERCENTAGE`)**: Variables with `format: "PERCENTAGE"` are never summed across children and receive no `0` leaf fallback:
+  - When a leaf formula's inputs all exist on the parent row (such as `Profit / Revenue`), the parent row automatically evaluates that formula on the parent's totals.
+  - When leaves hold typed rates, multiple formulas, or dimension-specific terms (`this.Segment`) that have no parent value, the parent row stays blank unless you write an explicit weighted formula or a single row-level `formula` (such as ``iferror(`Listening revenue` / `Paying listeners`, NULL)``).
+- **Grouped column headers (`summary`)**: When columns group months under a dimension header, the child column's `summary` setting controls the header (`SUM` adds the months; `NONE` evaluates the row's own formula at the header).
 
 ### Time
 
-System Date generates a table's periods inside its window, so forecast periods exist before data does; a source date shown as a field is not the report calendar.
-
-Fiscal-year labels name different calendar months under different conventions. The person's own month labels and the dates that already hold the figures the person is giving establish their convention. Repeating those figures under a fiscal-year label describes the same months.
-
-Rules compute at the model's base grain, usually the month. Day, week, month, quarter, half-year,
-and year are distinct grains, and a Date condition matches the grain being calculated: `Date` is the
-current period, and predicate paths carry their grain, such as `Date.Month`. A month rule does not
-fill quarter, half-year, and year cells; the variable's time rollup does. A number a monthly table
-creates gets a `SUM` rollup, right for a flow such as revenue, unless `rollup` on its create row
-names another: `LAST` for a balance or a count such as cash, weekly listeners, or headcount,
-`AVERAGE` for a mean. A rule with no Date computes at every grain and takes no rollup, so a ratio
-written that way stays a ratio in its quarters, half-years, and years. `set_time_rollup` changes a
-saved variable's. A balance takes its `LAST` rollup because the `last` source aggregation returns
-the latest-dated row anywhere in the coarse period, an earlier month's value when the closing month
-is empty.
-
-Last close is the scenario's accounting boundary. Actuals covers the closed periods; Forecast covers
-the later ones. A dated rule belongs to one range, so a rule that holds everywhere is written for
-both. Last close selects formula ranges; source observations establish facts, and the two can differ
-in either direction: a known event after close uses Forecast-range rules, and a requested estimate
-in a closed period uses Actuals-range rules. Changing Last close changes other reports; the
-requested periods are covered with rules and disclosed estimates, and an estimate is presented as
-one.
-
-Comparison values are presentation. When downstream formulas need a difference as model state, make it a modeled variable with an explicit calendar offset, `Revenue[Date.Month =
-dateadd(this.Date.Month, -12, "month")]`; a moving window is one range with inclusive, possibly
-relative, endpoints, `average(Revenue[Date.Month in [-3]:[-1]])`.
-
-Proration binds each amount and effective date to its source record, while system Date supplies the
-period. The rule for one record in one month, `[Subscription in any, Date.Month in any]`, is written
-once for Actuals and once for Forecast from the record's plain fields, `Annual Fee` and its start
-and end dates: a nonempty inclusive overlap is `datedif(start, end, "D") + 1`, monthly calendar-day
-proration uses `daysin(Date, "month")`, and the first, last, and partial periods and their totals
-are the check. Week boundaries follow one reporting calendar. A source-derived date grouping, such
-as a signup cohort, can lose older members outside the saved window while its parent total stays
-right; widening the window restores them.
+- **System `Date` vs. source dates**: System `Date` generates the table's reporting calendar across the window so forecast periods exist before data lands; a source date column shown as a field does not drive the table calendar.
+- **Fiscal-year conventions**: Align fiscal-year labels (`FY26`) with the customer's existing month labels and dated figures so restating those figures under a fiscal-year label targets the same calendar months.
+- **Base grain & time rollups (`rollup`)**: Dated rules evaluate at the model's base grain (usually `Month`). Coarser columns (`Quarter`, `Half-year`, `Year`) are filled by the variable's time rollup:
+  - `SUM` (default for monthly numbers): Flows such as revenue or expenses.
+  - `LAST`: Balances and counts such as cash, weekly listeners, or headcount (update via `set_time_rollup` on existing variables).
+  - `AVERAGE`: Period means.
+  - **Dateless ratio formulas**: A row `formula` written with no `Date` condition evaluates directly at every time grain without a rollup, keeping ratios accurate in quarters and years.
+- **`Last close` boundary**: `Last close` separates closed `Actuals` periods from `Forecast` periods across the scenario. Write rules in `Forecast` for known events after close, and write disclosed estimates in `Actuals` when estimating closed periods without shifting `Last close` for other reports.
+- **Time offsets & proration**: Use explicit calendar offsets (`dateadd`) or relative windows (`[-3]:[-1]`) for period comparisons, and prorate records across `[Subscription in any, Date.Month in any]` with `datedif(start, end, "D") + 1` and `daysin(Date, "month")`.
 
 ## One worked build
 
@@ -180,9 +79,7 @@ The running example as four `edit_table_blocks` creates. Two timeless tables hol
 {"action": "create", "name": "Territory assumptions", "rows": [{"dimension": "Territory", "items": ["Southgate", "Eastmere"]}], "columns": [{"variable": "Listener growth"}], "values": {"columns": ["Listener growth"], "rows": [["Southgate", 0.02], ["Eastmere", 0.03]]}}
 ```
 
-Listening is dated: each territory's opening count is an input in the last Actuals month, 2026-08
-here, and the Forecast rule grows it; as a count, its quarters, half-years, and years read the last
-month:
+Listening is dated: each territory's opening count is an input in the last Actuals month, 2026-08 here, and the Forecast rule grows it; as a count, its quarters, half-years, and years read the last month:
 
 ```
 {"action": "create", "name": "Listening", "columns": [{"time": "MONTH"}],
@@ -191,10 +88,7 @@ month:
  "values": {"columns": ["2026-08"], "rows": [["Weekly listeners[Southgate]", 100000], ["Weekly listeners[Eastmere]", 60000]]}}
 ```
 
-Paid listening breaks down by tier then territory. The leaf rules pin the inputs that carry fewer
-coordinates, the level defaults add the leaves up to each tier and the total, revenue's quarters and
-years add their months, and the ratio, written with no Date, is right at every level and in every
-period:
+Paid listening breaks down by tier then territory. The leaf rules pin the inputs that carry fewer coordinates, the level defaults add the leaves up to each tier and the total, revenue's quarters and years add their months, and the ratio, written with no Date, is right at every level and in every period:
 
 ```
 {"action": "create", "name": "Paid listening", "columns": [{"time": "MONTH"}], "rows": [
@@ -209,548 +103,118 @@ period:
    "formula": "iferror(`Listening revenue` / `Paying listeners`, NULL)"}]}
 ```
 
-Checks: the first Forecast month grows from the opening input, not from 0; Chorus × Eastmere in
-September is 61,800 × 0.01 × 50 = 30,900 of revenue; Chorus's row equals its two territories.
+Checks: the first Forecast month grows from the opening input, not from 0; Chorus × Eastmere in September is 61,800 × 0.01 × 50 = 30,900 of revenue; Chorus's row equals its two territories.
 
 ## How a rule reaches a cell
 
-A relative condition claims every cell whose coordinates include all its dimensions, at that depth
-and below: `[Stage in any]` runs at every stage, owner, and deal cell. The exact form, `$[...]`,
-claims exactly the depth it names. A parent's fan-out that lands where no finer rule claims the cell
-runs the parent's own rule there, which reads itself, `#CIRC!`.
-
-When several saved rules could fill a cell, the more specific rule wins, in a fixed order. An exact
-condition (`$[...]`) beats a relative one (`[...]`). Among relative rules, the one that names more
-dimensions wins: `[Stage in any, Deal in any]` beats `[Stage in any]`, which beats `[]`. Among rules
-naming the same number of dimensions, the one that pins more of them to a member wins: `[Stage =
-"Won"]` beats `[Stage in any]`; a single member beats a set, and a set beats an expression. Only
-when all of that is equal does the most recently saved rule win, so saving either tied rule again
-flips the result. Generated fallbacks (the source read, the zero) rank below every saved rule, and a
-rule's range limits when it applies without changing its rank.
-
-A rule's condition comes from the row it is written on: the members pinned above it, the deepest
-open dimension as any, and Date. A member row pins its members, so `child_defaults` on Scoping
-writes `[Stage = "Scoping", Owner in any]`, a default for Scoping's owners only. A breakdown axis
-row pins no member, so the deal rule written as `child_defaults` on `Total[Stage][Owner]` is saved
-on the deal's full path, `[Stage in any, Owner in any, Deal in any, Date.Month in any]`, and claims
-every deal cell. A `child_defaults` entry is such a rule, and the exact-depth form is the `$` rule
-on the axis row. One table can place a variable twice, each placement with its own breakdown and
-`child_defaults`, and a rule both placements declare is saved once.
-
-Each row of a read names the rule that computed it under `formulas`; `inherited_from` names the
-owner and condition of a rule saved more broadly or in another table. Diagnose a wrong or zero value
-with `formula_origins` and with `include_inputs`, which lists each read and its value. A value the
-person, another read, or your own arithmetic disputes gets `recalculate`: a calculation from scratch
-that replaces the cached result the page shows and says whether the cache held different values for that same read's calculation request; a read with other options, such as `include_inputs`, can send a different request, whose result the cache holds separately. A formula whose expression does not parse still claims its cells and shows the parse error in each until the expression is fixed.
-A formula whose condition does not parse applies to no cell, so the cells it was written for take the next-ranked rule or the source or zero fallback. A same-period cycle fails, and a valid prior-period offset breaks it.
+- **Relative (`[...]`) vs. exact (`$[...]`) conditions**: A relative condition (`[Stage in any]`) claims every cell whose coordinates include those dimensions at that depth and below (stage, owner, and deal). An exact condition (`$[...]`) claims only the exact depth named. If a parent sum fans out into child cells where no finer rule exists, it reads itself (`#CIRC!`).
+- **Specificity precedence order**: When multiple rules match a cell, the engine selects one in strict order:
+  1. Exact condition (`$[...]`) beats relative condition (`[...]`).
+  2. More dimensions named beats fewer (`[Stage in any, Deal in any]` beats `[Stage in any]`, which beats `[]`).
+  3. More pinned members beats open wildcards (`[Stage = "Won"]` beats a set, which beats `in any` or an expression).
+  4. Most recently saved rule breaks remaining ties (all saved rules beat generated source/zero fallbacks).
+- **How table rows map to rule conditions**: Writing `child_defaults` on a pinned member row (`Scoping`) saves `[Stage = "Scoping", Owner in any]`. Writing `child_defaults` on an open breakdown axis row (`Total[Stage][Owner]`) saves on the full path `[Stage in any, Owner in any, Deal in any, Date.Month in any]`.
+- **Diagnosing unexpected values**: Inspect `formulas`, `inherited_from`, `formula_origins`, and `include_inputs` on `inspect_table_blocks` readback (with `recalculate` when cached values are disputed). Unparseable expressions show `#ERROR!` in their claimed cells, while unparseable conditions match no cells.
 
 ## Imported records and sources
 
-A variable combines its source rows into one value per cell by its aggregation, a setting on the
-variable alone. An imported column with no rule of its own reads that aggregation over the record's
-observations through a generated fallback, the aggregation's function over the source column:
-`sum(<runway:exttables/550e8400-e29b-41d4-a716-446655440000/columns/Amount>)` for an amount that is
-added, `last(<column>)` for a field aggregated by its latest observation, such as the current
-department on a roster keyed by Employee ID. In a timeless table `last` is the latest observation
-overall; in a dated table it is the latest in each period. A formula that names an imported variable
-reads the value its aggregation already made, so `last(Amount)` over a SUM import receives the sum
-of the record's rows. An absolute read of a restated field gathers all of a record's rows before the
-aggregation can choose, which is what multiplies a deal's amount by its snapshot count; the relative
-read lets the aggregation pick one. The fallback reads its column through Last close, so Forecast
-months are zero unless the variable has a Forecast rule; `default_formulas.forecast` of `last(<its
-column>)` reads the source rows dated in each forecast month. A new import's saved `[]` rule,
-`sum(<column>)`, has no range and reads every period. A raw external-table column reference carries
-the cell's coordinates, Date included: in a dated rule `max(<column>)` sees only the rows dated in
-that period, in a timeless rule every row. The later of two dated values is `if(a > b, a, b)`.
-
-A source can carry several date columns: an observation month, a start date, a close date. An
-imported record's fields sit on the reporting calendar at its preferred time column
-(`preferred_time_property`), the source's first date column until one is set; the date the business
-reads the record by, expected close for open pipeline, the observation month for a restated rate, is
-the column that setting names. An `edit_table_blocks` `sources` entry sets it once for the whole
-source, on every column of the source that the same write does not set by name. `first` and `last`
-order the record's rows by that same column, so `last` is the row with the latest preferred date,
-and rows on one date keep their source order. A relative read in a period covers the rows whose
-preferred date falls in it, so a field placed at a date that never falls in the period reads nothing
-there. A predicate on a date column filters within that selection, and an explicit period filter
-names the grain on both sides, `ObservedAt.Month = this.Date.Month`. A sync column stamps when an
-export ran. An export that restates every record each run carries one state per record under each
-stamp. When a record's rows are identical under every stamp, the export restates the record as it
-stands now, and a stamp names which records existed at that run; when the rows differ, each stamp
-holds that record's state at that run, and the stamps are a history. Which of the two an export is,
-is a fact of its rows that the preview shows. A read that filters the sync column against a snapshot
-input covers that one export; a read with no such filter covers every export in its selection.
-
-A source dimension placed as a column of a table keyed by the record, `{"dimension": "Owner"}` in
-`columns` of a register keyed by Deal, shows each row's member, `last` over the record's rows when
-it has several: the latest observation by the source's date column when the source has one, the last
-row in source order when it has none. A member is matched by its kind: a text member by its exact
-spelling, a date member by `date(y, m, d)` or its text, and a datetime member, whose text carries a
-clock such as `"2025-11-01 00:00:00+00"`, by that text, while `ObservedAt.Month` is each member's
-month as a date, so `ObservedAt.Month = date(2025, 11, 1)` reaches the November snapshot wherever
-it is written.
-
-An entity ID identifies a record; an observation stamp identifies one observation of it. A daily or
-monthly export restates the same employee or deal once per sync, while a ledger holds one row per
-transaction. Current state is the record's latest observation, and history is the observation whose
-stamp falls in the report period, so a record observed repeatedly needs one observation selected per
-entity before any total, while a ledger is meant to be summed. A connected feed adds one observation
-per record per sync, so a source with one row per record today will not stay that way.
-
-The roster and the monthly table answer different questions. A record table keyed by Employee ID
-with no Date is a current-state view: each attribute's latest observation, one row per employee. A
-monthly table is a time series: each period reads that period's own observation, bound to the report
-Date, so the April column reads the April row and a raise shows up in the month it happened. A read
-with no date binding returns one value for every period, which flattens the history the monthly
-table exists to show. The plain read answers only for months that have a row; carrying the last
-observation into later months is the carry-forward default, disclosed as an assumption, and where
-the Actuals and Forecast ranges split changes none of that. A connected roster whose template
-declares its record key and observation date lands each numeric field with that default already
-written: ``[`Employee ID` in any]`` reads the period's latest observation and carries the prior period's
-value when the period has none, and `[]` sums the employees' record values, so a monthly table and a
-company total need no rule of their own.
-
-A field that changes over time is looked up without the `$`: with a monthly roster,
-`sum(Headcount[Employee where Department[Employee = Employee] = this.Department, Department = this.Department])` counts
-each employee under the department their row shows in this month, so a transfer moves the person in
-the month it happened, while `Department$[Employee = Employee]` applies the latest department to
-every month, as a timeless department mapping does. When the label is fixed, the mapping is the
-tool; when it moves, a text variable carries the label in force. Department in Force reads
-Department in Actuals and carries forward in Forecast, and a department row sums the employees it
-held that month:
+- **Variable aggregations & external columns**: Each imported variable aggregates source rows using its configured function (`sum(<runway:exttables/550e8400-e29b-41d4-a716-446655440000/columns/Amount>)` for additive amounts, or `last(<column>)` for latest-observation attributes such as roster department). Relative reads let the variable's aggregation pick one observation per period; an absolute read (`$`) over a restated source gathers all snapshots unless filtered.
+- **Forecast fallback on imported variables**: Default source fallbacks read through `Last close`, leaving `Forecast` months at `0` unless a `Forecast` rule is set (such as `default_formulas.forecast: "last(<column>)"` for dated future rows, or an un-ranged `[]` rule `sum(<column>)`).
+- **Preferred time column (`preferred_time_property`)**: Places imported records on the reporting calendar by the business date that governs them (such as expected close date for open pipeline or observation month for restated rosters) and orders `first`/`last` aggregations. Set it across a source via `edit_table_blocks` `sources`.
+- **Restated snapshots vs. transaction ledgers**: A ledger has one row per transaction and is summed; a restated export or sync stamps one observation per entity per run. Inspect the preview first (identical rows across stamps repeat current state, not history; differing rows preserve per-stamp state), and filter by snapshot month (`ObservedAt.Month = this.Date.Month` or `ObservedAt.Month = date(2025, 11, 1)`).
+- **Rosters vs. monthly staffing tables**:
+  - **Timeless roster (`Employee ID` on rows, no `Date`)**: Shows each employee's latest current-state attributes (`last` over observations).
+  - **Monthly staffing table (`Date` on columns)**: Binds each period to that month's observation and carries the latest observation forward into future months (`[`Employee ID` in any]` carries forward; `[]` sums across employees).
+- **Time-varying attributes (`Department in Force`)**: When an employee's department changes over time, look it up without `$` in Actuals or carry it in a dated text variable (`Department in Force`) so transfers move headcount in the month they occur:
 
 ```formula
 sum(Headcount$[`Employee ID` where `Department in Force`$[`Employee ID` = `Employee ID`, Date.Month = this.Date.Month] = this.Department, Date.Month = this.Date.Month])
 ```
 
-Which employees sit under which department is membership, which belongs in a mapping from Employee
-to Department. An employee sits under their mapped department. With no mapping or shared source,
-each sits under every department and a rule compares theirs to the row's. Records with no item for a
-dimension show as None; an open dimension condition covers that empty member, a catch-all mapping
-can classify it, and the parent's inheriting rule reaches it along with every named member.
-
-A drill-down over a record key computes at the record and adds up above it. In weighted pipeline
-shown by Stage, then Owner, then Deal, by month, the deal is the line: its formula is written once,
-as `child_defaults` on the axis row above the deals, `Total[Stage][Owner]`, and the table's save
-gives each owner, each stage, and Total a default that adds the level beneath it, in each range the
-deal's formula covers. On a deal's row the formula reads that record's own fields by their plain
-names, so `Amount`, `Probability`, and `Expected close` are that deal's values:
+- **Record-key drill-downs (sum of products)**: To compute weighted pipeline by `Stage`, `Owner`, and `Deal`, write the multiplication rule once on the deal leaf (`child_defaults` on `Total[Stage][Owner]`) so parent rows sum the weighted deal results rather than multiplying summed amounts by summed probabilities:
 
 ```formula
 if(startofmonth(`Expected close`) = Date.Month, Amount * Probability, 0)
 ```
 
-The pairing happens at the record and the adding above it, which is the shape of any sum of
-products: a product written on a parent would multiply a sum of amounts by a sum of probabilities.
-
-Nesting one source dimension under another shows the combinations in the source rows, so Anouk sits
-under Scoping only where a Scoping deal is hers and an ownerless deal sits under the empty member,
-spelled `empty:None` in a selector; an all-empty combination appears when `show_empty_members` is true.
-A saved item of a key nests under its mapped item, or under each mapped item when no formula maps it.
+- **Sparse dimension nesting & empty members**: Nesting source dimensions displays only combinations present in source rows (with missing values under `empty:None`, or all-empty combinations when `show_empty_members` is true).
 
 ## Dimensions and mappings
 
-A dimension mapping classifies one source dimension through another: Account to statement Bucket,
-several department vocabularies to one reporting Department. The classification is shared model
-structure: the mapping holds which accounts make up each statement line, a row's formula names the
-line, and the person changes the classification once, in the mapping, with every row that reads it
-following. Mapping changes are reversible edits with historical effects worth explaining. Source
-columns supply dimensions and variables; manual dimensions carry planning inputs, and a planned
-record has its own identity until a source record replaces it. Several sources describing one
-business concept share one reporting dimension, each mapped in with its own keys. A lookup's keys
-are dimensions, and a mapping rule's condition names every key, each term comparing one key's value
-or leaving it open with `in any`.
-
-A mapping is how a statement gets company-specific lines. A one-off visual grouping can stay as table
-nesting; renaming a user-created item is an item edit; making several imported labels read as one
-item is a mapping. A written mapping carries a catch-all whose stated meaning covers the unmatched
-items, and the receipt's `row_membership` is the write's effect on other reports. A timeless mapping
-view, source keys on rows and mapped attributes as columns, is where a person edits a classification
-and the home of each dimension a map creates. A blank mapping cell is a source item that maps nowhere
-and stays visible; a reporting category with no activity is right when nothing happened and wrong
-when the mapping never sends anything there, and only the source rows say which. A filter names an
-exact member: the source code `DATA` and the mapped label `Data` are different values.
-
-A mapping reads in formulas two ways. For an imported measure, whose source rows carry the mapping's
-keys, a mapped dimension in a predicate groups those rows through the mapping:
+- **Shared classification structure**: A dimension mapping classifies source keys into reporting groups (such as `Account` to statement `Bucket`, or multiple source department lists into one reporting `Department`). Editing the mapping updates every formula and table that reads it, and its `catch_all` bucket keeps unmatched items visible.
+- **Two ways to read a mapping in formulas**:
+  1. **Over an imported measure** (whose source rows carry the mapping key): Filter directly on the mapped target dimension:
 
 ```formula
 sum(Amount[Bucket = "COGS"])
 ```
 
-An entered or formula-authored variable has cells only where they were written, such as Account ×
-Month, so a predicate on Bucket reads it at Account × Bucket × Month, where nothing is written, and
-the next matching rule runs there. An authored variable rolls up through its key instead:
+2. **Over an authored or entered variable** (written at `Account × Month` without `Bucket` in its coordinates): Filter via a key hop (`Account.Bucket`) so the read stays at `Account × Month`:
 
 ```formula
 sum(Amount$[Account.Bucket = this.Bucket, Date.Month = this.Date.Month])
 ```
 
-`Account.Bucket` keeps the read at Account × Month and selects the accounts the mapping puts in this
-bucket. A hop is a lookup keyed by the value before it: `Bucket$[Account = this.Account]` reads the
-mapping by its key, and `this.Project.SourceTeam.Team` works when Project maps to SourceTeam and
-SourceTeam to Team. A measure that already isolates its scope reads while keeping only Month: `R&D
-Expense` held for R&D accounts alone feeds the R&D department's Opex rule as ``sum(`R&D
-Expense`$[Account in any, Date.Month = this.Date.Month])``, with Department dropped deliberately.
+- **Chained hops & scoped measures**: Lookup hops chain across mappings (`this.Project.SourceTeam.Team`). When reading a measure that is already isolated to one scope (such as `R&D Expense` stored by `Account × Month`), drop the outer `Department` coordinate deliberately: ``sum(`R&D Expense`$[Account in any, Date.Month = this.Date.Month])``.
 
 ## Tables as views
 
-A time-series table has variables on rows and Date on columns; a record table has records on rows
-and fields on columns, its key rows the items of a dimension such as Employee ID. Its fields are
-variables such as Salary and dimensions such as City, shown per record; a stable identity keeps two
-workers with one readable name distinct. A row or column declared on create takes the same `sort`,
-`role`, `grain`, `members`, and `hidden` a saved node takes.
-
-A dimension shown as a field beside each record is read at the cell's address, the dimensions on
-the table's axes, which a mapping rule needs as its keys; nesting it beneath a variable makes a
-breakdown. Moving an axis between rows and columns changes presentation, not the cell's grain. A
-filter narrows the items of a breakdown dimension, and records are selected by their fields through
-a measure: active headcount is a measure that counts active employees with Status kept as a field.
-A formula conditioned on a classification dimension keeps each drilled member's own coordinate, so
-members outside the condition read empty and hide when empty members are hidden.
-
-A read resolves every cell a table shows, so a table that lists every source record with many
-columns costs rows times columns, and a mapped column adds a lookup per row. A request for a column
-on the records keeps that column, and the rest of the spreadsheet comes with it only when the whole
-table is cheap. When the records are too many for every column, the columns the request names and
-the ones needed to read them stay, with the row dimension's items filtered to the rows that matter.
-A table is the person's report, and a wrong window is fixed on the table itself. A table wider than the page scrolls sideways across its displayed columns, with Shift and the mouse wheel, a trackpad swipe, or the bar along its bottom edge that shows while the pointer is over the table. A collapsed column group shows the periods inside it once the person expands it from its header; whether a group is open is that person's view in their browser, not a setting of the saved table. Its window and columns are what every viewer of the page sees.
-
-Period-specific inputs and reports use system Date; genuinely timeless mappings, rosters, and
-assumptions can omit it. Writing dated values or selecting periods for readback does not set the
-table's display window. For a report with a requested start and end, set the table's `window`
-explicitly and verify its saved window range as well as its values. A readback of selected months
-proves those cells, not the full displayed range. A saved block owns its name, window, granularity,
-transpose state, comparison, visibility, and formatting, and a change touches only the aspects
-requested. Number format and decimal places on a variable are defaults; row, column, and cell
-formats belong to the saved table, styled at the broadest scope that fits, and currency, color, and
-variance polarity stay on the variable.
-
-An analysis table is saved model state built from model variables and dimensions. Like every saved
-table, a read resolves its cells and everything they read, until it is removed once it stops
-being useful. Related edits save together, and a table that exceeds one request grows in coherent
-groups that keep the table and its shared variables. A table read with `layout_problem` is edited
-against its returned refs.
+- **Time-series vs. record tables**: Time-series tables put variables on rows and `Date` on columns; record tables put a record key (`Employee ID`, `Deal`) on rows and variables/dimensions as field columns. Keep large record tables fast by displaying only requested columns and filtering the row dimension to relevant records.
+- **Display windows & formatting**: Set `window` explicitly on the table when a report specifies a start and end date, and apply table-specific `format_updates` at the broadest applicable scope (variable-level format acts as the model default).
 
 ## Scenarios
 
-Mutually exclusive business futures are scenarios. Additive dimension items coexist in one future
-and their aggregate answers a real question; a total across alternative fundraising or growth cases
-answers nothing, so alternatives are scenarios and the model's dimensions are the coordinates the
-business actually has. A scenario inherits unchanged state from its base. User-authored overrides
-are scenario-scoped; imported source records stay shared and read-only. A requested view or chart
-is a page, whatever the request calls it; people often say "scenario" for a view. A page built in a
-scenario shows there and in the scenarios built on it.
-
-The turn context's `scenario` is the scenario in view, where the person happens to be looking, and a write with no `scenario` lands there. Its `workspace_default`, named whenever the person can read it, is the plan of record every other scenario inherits from. Having a scenario open says little about where a new report belongs, so when a request for pages or tables names no scenario and the one in view is not that named default, the reply's first sentence names which of the two gets the work, or asks, before writing.
-A lever that moves only the forecast is a dated input whose Forecast cells differ in the scenario,
-or an input only the Forecast rule reads: Upside overrides Listener growth, which only the Forecast
-rule of Weekly listeners reads. A timeless value that every period reads moves the history too,
-because a scenario can change closed periods as well.
-Cases sit side by side in one table through its `comparison` with `scenarios`. Each comparison column identifies a period and a scenario: Main's September 2027 column and Upside's September 2027 column have separate returned refs. Selecting the inspected Upside ref reads that case's value.
-A read of the selected scenario with `comparison: "none"` inspects its underlying model values and formulas while keeping the table's saved comparison. On an underlying read, `formula_origins: "all"` adds annotations showing which rules computed its cells. Comparison values can be complete while the selected formula is reported as unavailable.
-A Canvas simulator shows one scenario at a time unless cross-scenario Canvas reads are enabled for the workspace.
+- **Scenarios vs. dimensions**: Use dimensions for segments that coexist and add up within one plan (regions, tiers, departments); use scenarios for mutually exclusive business futures (Base, Upside, Downside). Scenarios inherit unchanged rules and inputs from their base while keeping imported source records shared and read-only.
+- **Target scenario selection**: Turn context reports both the scenario currently in view (`scenario`) and `workspace_default` (the plan of record). If a user asks for new pages or tables without naming a scenario while viewing a non-default scenario, state in your first sentence which scenario receives the work (or ask before writing).
+- **Forecast-only levers & scenario comparisons**: To move only the forecast in a scenario, override dated `Forecast` cells or an input read only by `Forecast` rules (timeless inputs read by all periods move history too). Use `comparison: "none"` with `formula_origins: "all"` to inspect comparison rules.
 
 ## What a saved value proves
 
-The calculated readback tells a no-data blank from a numeric zero. A write receipt whose `status` is `applied`, with its
-`changed` counts and readback, proves the change, and the receipt states what the write replaced, tied, or refused, so
-the next call can be shaped from it. When a receipt cannot prove the outcome, the saved table is read at meaningful
-starting and later periods, business segments, and coarser grains. Verify a saved read on system Date at the requested
-grain with a member whose state changes inside the window: a start, an end, a rate change, a different currency. A
-member that never changes cannot reveal a wrong read, and an undated total cannot prove the projection.
+- **Readback verification**: A write receipt with `status: "applied"` proves what changed, replaced, tied, or failed. Verify dated calculations on system `Date` across starting, middle, and ending periods using a member whose state changes inside the window (a hire start, termination, rate change, or FX conversion) plus coarse period rollups.
+- **Tracing discrepancies & driver sensitivity**: Compare calculated record cells against source facts (for example, a salaried employee's full month equals annual rate divided by 12). When testing driver sensitivity in Main, remember that an input edit is a live save and must be restored if temporary.
+- **Performance & scale rules**:
+  - **Use only necessary time grain**: Prefer monthly or yearly queries and formulas when daily grain does not change the answer.
+  - **Write general formulas**: Reference `Date` and `this.<Dimension>` rather than duplicating rules per year or item.
+  - **Share expensive expressions**: Extract repeated sub-expressions into helper variables when doing so reduces calculation time.
+  - **Ingest large record sets as sources**: Load large tables of fixed values (history, rosters, transaction lists) via `edit_integrations` `ingest_csv` and aggregate them with one rule rather than writing hundreds of cell rules (check `variable_rules` counts on write receipts).
 
-A saved value proves that the rule computes at those coordinates; a member whose value follows from
-its own record, a salaried member's full month equal to its rate divided by twelve, proves the
-amount, and a cell that differs from its record is unfinished work. A result that differs from the
-intended model traces to the selected rule and what its references read, and the breakdown stays
-while the rule is repaired. A driver test proves how a result responds: after an input change,
-compare the affected and the unaffected results at the requested grains. That input change is a
-save: in Main it changes the person's numbers until reversed; in a scenario, that scenario alone.
+## Modeling the business
 
-A row blank or zero across the whole horizon is unfinished work unless the business fact is zero.
-Say which checks ran and which relationships stay untested. A read that timed out proves nothing,
-and the work stays unverified until a read returns. Missing scope, a wrong regime, a source column
-placed at the wrong date, and unmapped items are modeling conditions, resolved in the model while
-the imported rows stay as they are; the work is finished when the requested cells compute from the
-source for the members whose state changes inside the window, and rows the source never contained
-are the only evidence gap to report. The `variable` and `dimension` reads list what depends on an
-object. Complete deletion always requires confirmation. Use `force` only after the person
-chooses deletion and hears its dependency impact. An edit to past periods is said so.
+### Structure, coordinates, and controls
 
-Build with these rules; check them when calculations slow or time out:
+- **Simulation scope & horizon**: A full model build connects revenue, costs, staffing, and cash across the horizon (defaulting to 12 months of history and 24 months of forecast) with Base, Upside, and Downside scenarios, pages, a closing simulator, and a walkthrough. Segment variables by the dimensions where economics differ (plan, segment, region, SKU, currency).
+- **Records, placeholders, and controls**: Represent people, customers, and deals as keyed records grounded in connected data, files, or cited company evidence, filling gaps with role-named placeholders (`Software Engineer 2`) or cohorts reconciled to stated totals. Place shared editable drivers (growth, pricing, churn, hiring pace, payment terms) on one controls page that drives downstream outputs and the closing simulator.
 
-- **Use only necessary time detail.** Prefer monthly or yearly source queries and formulas when finer detail cannot change results.
-- **Use general formulas.** Use the cell's system Date or dimension item instead of copies with hardcoded years or items.
-- **Share expensive expressions.** Consider helper variables for repeated calculations; measure whether they improve performance.
-- **Use source data.** Read available amounts, dates, and items instead of hardcoding values or manual lists. A large set of fixed values, such as history, a roster, or a list of transactions, is the rows of a source table that variables read through their aggregation, one rule for all of them: `edit_integrations` `ingest_csv` loads a CSV prepared in the workspace as that source, inline when it is small and through its upload slot when it is large. A table write's receipt states under `variable_rules` how many rules each written variable held before the write and holds after it. Keep editable assumptions where needed.
+### Revenue and pipeline
 
-Preserve exceptions, event timing, historical observations, dimensions, and Actuals/Forecast coverage. Verify repairs with the same read: unchanged values, missingness, and errors; improved calculation time.
+- **Revenue schedules**: Model revenue by how the business earns it: recurring-revenue schedules track opening customers, additions, churn, ending customers, and ARPU; transaction, marketplace, and contract models follow unit economics and recognition terms. Keep bookings, recognized revenue, billing, and cash collection distinct.
+- **Pipeline & deal registers**: Separate deals into three distinct measures by state and governing date:
+  - **Bookings (won deals)**: Placed in the month the deal closed.
+  - **Open pipeline / Weighted pipeline (open deals)**: Placed in the expected close month (weighted at the deal leaf via `Amount * Probability`, summed above).
+  - **Lost deals**: Tracked separately when requested.
+  - Disclose how many deals lack an owner and which source stages map to won vs. open.
 
-## What a model of the business is
+### Costs and staffing
 
-A model is a simulation of the business: its editable drivers explain how revenue, costs, staffing,
-and cash change over the horizon, and every calculated output traces to a control an operator can
-move. A request to build a model produces the whole simulation, every part of the business that
-changes the economics, connected from its levers to cash, with its records, scenarios, pages, and
-closing simulator and walkthrough. A request for one plan, forecast, statement, or projection
-produces that piece, built so it can join the rest.
+- **Cost drivers**: Separate Cost of Revenue (delivering the sold product/service) from Operating Expenses (R&D, S&M, G&A) per company policy. Drive variable costs by their operational unit (transactions, users, compute, headcount) rather than flat revenue percentages when unit drivers exist.
+- **Headcount & payroll plans**: Deliver both a current-state roster and a monthly staffing table keyed by `Employee ID`:
+  - **Headcount**: Each employee contributes `1` in months employed (by default, any month between start and termination inclusive) and `0` otherwise.
+  - **Compensation**: Estimate pay only as a role-level rate each employee row reads, reserving person-level pay for sourced or user-supplied facts and explaining estimates in your reply. Convert annual (`Annual Pay / 12`), monthly, or hourly rates (with disclosed hours), prorating partial months, adding taxes/benefits, and keeping contractors, unpaid founders (`0`), uncategorized departments, and currencies explicit.
 
-A model has a horizon, a reporting currency, the history that is available, and the scenario's Last
-close. By default it spans the previous twelve months and the next twenty-four. It keeps recorded
-results, commitments, and provisional assumptions apart, and it becomes a budget only when the
-company calls it one. A model of the business carries its base case with an upside and a downside
-beside it; the three differ in the levers they move, growth, pricing, hiring pace, churn, and a
-narrower plan adds a scenario when a decision turns on an alternative future.
+### Cash and financial statements
 
-The method follows the evidence: trend, cohort, pipeline, usage, contract, or plain assumption.
-When several estimates are defensible, recommend one, use it, and say what the alternatives would
-change. A modeled goal is an editable assumption; only the company can make it a commitment. A
-value that carries a unit is segmented by the dimension that carries it, pay by its currency, before
-any total, so the top of a payroll broken down by currency is a converted figure at a stated rate or
-the currency rows themselves. Definitions live beside the saved model.
+- **Cash & runway**: Project ending cash as opening cash (seeded from books or a disclosed assumption) plus dated operating, working-capital, capex, debt, and financing flows. Use live accounting open balances over lagging CRM statuses for overdue collections, and state the exact cash constraint date (or report that cash stays positive across the horizon).
+- **Income Statement (P&L)**: Map source ledger accounts into statement lines (`Bucket`) via `edit_dimension_mappings` `map` (or inline via `dimensions` on `edit_table_blocks` `create`), keeping `Unclassified` visible in reconciliation totals. Write `Gross Profit` and `Operating Profit` as row formulas over the statement measures (`Revenue - Cost of Revenue`), and nest `Account` beneath each measure to show account detail.
+- **Balance Sheet**: Show period-end balances (`rollup: "LAST"`) across `Total assets`, `Total liabilities`, and `Total equity` (including provider-generated `Net Income` and `Retained Earnings` rows, while excluding `Section` presentation subtotals). Verify `Assets = Liabilities + Equity` in every period and name the exact amount, period, and accounts of any residual.
+- **Cash-Flow Statement**: Reconcile operating, investing, and financing cash flows to the change in Balance Sheet cash. Under the indirect method, start from Net Income, include each working-capital, capex (using gross fixed-asset additions so depreciation addbacks are not double-counted), debt, and equity cash movement once, and exclude cash and retained-earnings net-income rollups.
 
-## The coordinates of the business
+### Comparisons, anomalies, and final delivery
 
-The dimensions of a model are the coordinates along which the business actually differs: plan,
-segment, region, and channel for a subscription business whose customers arrive in cohorts that
-age; side, category, and geography for a marketplace; service line, client, and the people who
-deliver for a services firm; SKU, channel, and location for a physical product. Each such
-coordinate is a dimension, and a variable it changes is segmented by it; a flat company-level
-number where the business varies underneath is a total with its explanation missing.
+- **Budget vs. Actuals comparisons**: Align plan and actuals over the latest complete shared period using existing measure mappings. Compute `Variance = Actual - Plan` and `Variance % = Variance / abs(Plan)` (omitting percentage when Plan is zero).
+- **Anomaly & tie-out checks**: Distinguish internal model consistency (`0` difference between two views reading the same saved rows) from external source tie-outs (comparing model totals against independent source P&L, trial balance, or bank totals).
+- **Delivery summary**: Link the saved page and state the method, key assumptions, commitments, coverage gaps, and whether source rows represent restated snapshots or additive transactions.
 
-## Records and placeholders
-
-The people, customers, and deals of a business are records: a table keyed by a stable identity, its
-fields the facts a formula needs, with time series that read those fields. A customer table keyed
-by customer carries plan, segment, region, start date, end date, and price, and revenue, churn, and
-expansion per period are calculated from those fields, so an operator extends the business by
-adding a row. A record the business does not yet have, a planned hire or an expected customer, is
-a row like the rest, planned by its start date and editable fields until evidence makes it actual.
-
-Records start from the most direct evidence: connected data, a file, the person's words, then public
-sources tied to the company, such as its team and customer pages, press, and profiles naming it as
-the current employer. A person or customer a source shows as current is a record under the real
-name, holding each field the source shows. Estimates fill the rest, reconciled to the person's
-totals: pay as a rate per role that each row reads, role-named records such as `Software Engineer 2`
-for unnamed people, and cohorts for unnamed customers, one per combination of dimensions sold into.
-
-## Controls and pages
-
-Shared inputs live together on one page the operator reads top to bottom, a table for each subject:
-growth, pricing, churn, hiring pace, unit costs, payment terms. A control sits at the grain
-where someone would change it, a churn rate per plan, a hiring start per role, and within a range
-that makes business sense to move. Every calculated output traces to these controls, so moving one
-changes the whole business; the forecast simulator that closes a build binds to this page, and the
-upside and downside scenarios differ in these controls. One page per part of the business, in the
-order a reader thinks about it, each page reusing the same variables.
-
-## How the company earns
-
-Revenue is modeled the way the company makes it. A recurring-revenue schedule shows opening
-customers, additions, losses, ending customers, and their revenue; growth and churn are the
-assumptions, and the customer movements are their calculated effect. Subscription cohorts reconcile
-to recurring revenue, and a zero-growth or zero-churn assumption is disclosed as one. Transactions
-and marketplaces follow their unit economics. Seasonality is evidence from the company's own
-history or an assumption. Contracts, projects, and grants keep their real terms under the
-company's recognition policy, so unsigned or conditional revenue stays contingent. Bookings,
-recognized revenue, billing, and cash are four events with four timings.
-
-A pipeline is the deals themselves, and a deal is open, won, or lost, with its amount meaning
-something different in each state. A won amount is a booking and belongs in the month the deal
-closed. An open amount weighted by its probability is an expectation and belongs in the month the
-deal is expected to close. A lost amount is its own measure when someone asks. So bookings, open
-pipeline, and lost deals are three quantities, each reading the deals in its state; a closed deal
-contributes nothing to open pipeline. A deal count counts each deal once, in the forms under `count`
-for a total and for a deal's row; deals without an amount are in the counts and out of the totals.
-A pipeline model is a time series of bookings and pipeline with the deals beneath it, one row per deal with its stage, owner, amount, and dates, so
-the register reconciles to the totals because it is the same deals; weighted open pipeline is the
-two-rule drill-down under How a rule reaches a cell. The source's real classifications stay on the
-deals, with stage first for open pipeline, and measures carry business names:
-`HS_WEIGHTED_PIPELINE_IN_COMPANY_CURRENCY` is Weighted pipeline. The reader learns how many deals
-have no owner and which stages were treated as won or open.
-
-## What it costs
-
-A cost is modeled at the scope where it happens and by the driver that moves it. Company accounting
-policy decides what is cost of revenue and what is operating expense: cost of revenue delivers the
-sold product or service, operating expenses develop, sell, and administer. Shared resources follow
-an established allocation or a disclosed provisional split, counted once. Infrastructure and usage
-costs follow their real driver, transactions, customers, compute, or storage, with vendor
-baselines, tiers, floors, and effective dates kept. A percentage of revenue fits a cost that moves
-with revenue; a usage, staffing, or unit driver fits a cost that moves with that thing. Ratios are
-grounded in complete company periods, an editable assumption, or a labeled estimate, and staffing
-steps, capacity, commitments, and pricing tiers are the reasons margins change.
-
-## Who does the work
-
-A headcount plan connects who is employed, from when to when, and on what pay, to how many people
-there are each period and what they cost. It delivers the roster and the monthly table described
-under Records and observations.
-
-Headcount counts people: an employee contributes one while employed and zero otherwise, and
-headcount adds those contributions, so roster rows are neither extra workers nor the bounds of
-anyone's employment. Employee IDs are the identity, so two people with the same name stay two
-people. By default a month's headcount counts anyone employed at any point in the month, so the
-start month and the termination month both count and a null termination leaves the employment
-open; a task that names another convention, such as month-end headcount, sets it. Employment dates
-decide eligibility and proration within a month, and a termination date is a fact about the
-person's last day whatever the status field says. Hires and departures that are not in the records
-are planning assumptions.
-
-Annual pay divided by twelve is a full month at unchanged pay; a monthly rate is a month's pay as it
-stands; hourly pay needs a disclosed, editable hours assumption or stays visibly uncovered. Partial
-months follow the employment dates and the stated proration basis. Loaded cost, variable pay,
-taxes, benefits, comes from records or disclosed assumptions; a known unpaid founder is a real zero
-where an unexplained zero is a coverage gap. Contractors, uncategorized departments, and unresolved
-compensation stay visible as what they are, and person-level privacy holds in formulas, summaries,
-and anything that leaves the workspace.
-
-A bottom-up plan is the people: active employees, confirmed departures, committed starts, planned
-hiring, and disclosed attrition, each planned worker with a stable identity and a department. A
-narrower plan can hold editable role counts, costs, and dates with no HR connection. A demand-driven
-plan separates required headcount, committed headcount, and the gap, paying committed workers and
-planned hires alike while keeping them apart. Capacity follows available working time and
-allocations while payroll follows paid employment, and the two can differ in timing.
-
-## Where cash lands
-
-Collection and payment timing connect operating activity to cash. Working capital, inventory,
-spending, debt, and financing follow commitments and disclosed assumptions, preserving real payment
-terms and material customer concentration. Projected cash is opening cash plus dated movements.
-Unknown opening cash uses a disclosed, editable assumption, making the runway conditional on it.
-Negative cash stays visible, and committed financing stays apart from planned raises.
-
-Accounting systems such as QuickBooks, Xero, and NetSuite record invoice payments. A positive open
-balance past its due date is overdue. Register or CRM statuses can lag payments, so a collections list
-uses current invoice balances from connected books; otherwise, its stated basis is the register's status and due date.
-
-Cash reviews start with the balance's date, currency, restrictions, and forecast scenario. The
-dated projection shows the first period below the company's minimum cash requirement, or zero for
-exhaustion; without a crossing, the answer covers only its horizon. Collections, hiring, committed
-spending, and financing show the largest supported effects and their timing. Delivery names the
-cash basis, constraint date or horizon, consequential assumptions, and decisions needing attention;
-missing starting cash leaves a conditional answer with its missing inputs named.
-
-## Statements
-
-A statement is the model's results arranged the way finance reads them. Its rows are measures,
-revenue, cost of revenue, operating expenses, profit, assets, cash, each a variable the rest of the
-model shares, and the statement shows how they relate for the requested entity, periods, currency,
-and accounting basis. History comes from records or supplied facts; a missing historical input
-stays unknown in the statement, and an editable assumption completes a forecast or a labeled draft.
-Each reporting month is entirely actual or entirely forecast at its close boundary, and
-month-to-date pacing lives apart from the statements.
-
-A ledger arrives as accounts, dates, and amounts. The statement adds one fact per account: the
-line it belongs to. That fact is a dimension mapped from Account, `Bucket`, kept in a mapping
-table, accounts on rows and Bucket as the column, where a person changes a classification once.
-One `edit_dimension_mappings` `map` call writes that classification and creates `Bucket` with the
-mapped lines as its items when it does not exist yet; the receipt says whether the target was
-created or reused. The `edit_table_blocks` create whose rows read `Bucket` declares the same
-mapping in its `dimensions` entry (`target`, `keys`, `items`, `catch_all`), saved in the table's
-own change before its rows resolve, so the classification and the statement are one call. The
-calendar write names the scenario, not a table, so it rides in the same step. A line is one read
-through it, `sum(Amount[Bucket = "Revenue"])`, and the same variable broken down by Account is the
-line's account detail, each account at its own coordinate. Gross profit
-and operating profit are arithmetic over the lines. Every value on the statement is one of those
-two formulas, so it moves when the ledger does.
-
-A measure that sums ledger records is a total of accounts, and it carries the ledger's own account
-hierarchy beneath it in the same table, keeping a level when it groups. The reader opens a measure
-and sees its accounts; the measure's classification keeps each account's coordinate, so an account
-outside the measure reads empty and hides. A subtotal such as gross profit is arithmetic over other
-measures and has no accounts of its own. Department, class, and other cross-cutting dimensions
-belong in a column or a separate view when someone asks.
-
-The imported accounting properties are the statement's starting measures, named for the source's own
-classifications; separate classification properties carry account detail beneath them, and a single
-amount property with an Account Type dimension supplies the statement groups through that dimension.
-Uncertain classifications stay visible and editable in the mapping, and Unclassified imported
-amounts are part of the source total. A requested check-in before the build presents the proposed
-statement groups and the accounts feeding them and asks only the questions the source leaves open.
-
-The profit relationships are formulas on the statement's rows: with positive expenses, Gross Profit
-is Revenue minus Cost of Revenue, and Operating Profit is Gross Profit minus Operating Expenses, so
-the statement stays right when source activity or a classification changes. The arithmetic follows
-the imported sign convention, which the actual values and source reconciliation establish. Each row
-has a rule at the model's base Date grain that covers the range it is meant for, a parent that is
-its own formula, and quarter, half-year, and year values that add up the months.
-
-A balance sheet is period-end values by the company's reporting groups, with every account that
-carries postings, and `Total assets`, `Total liabilities`, and `Total equity` with their natural and
-contra signs; its cash measure is what the cash-flow statement reconciles to. A source row's kind,
-Data, Header, Section, says how the provider printed it that period: a Header can carry real
-postings, and a Section is a presentation subtotal that never counts again. Total equity includes
-every source equity component, Net Income and Retained Earnings properties included. Period-end
-balances sum across accounts at the same snapshot date, and quarter, half-year, and year views use
-the closing snapshot. Assets equal liabilities plus equity in every period in the report's signs; a
-residual has a cause, and the answer names its amount, period, and accounts.
-
-A cash-flow statement explains the change in cash, direct or indirect, and reconciles to the change
-in the balance-sheet cash measure. The indirect method is a bridge from net income to cash, and
-every other row either joins the bridge or stays out: cash itself and a retained-earnings movement
-that repeats net income stay out, while distributions and financing movements count once. A balance
-change can mix cash transactions with noncash movements, and the underlying transactions say what
-the cash was and whether it was operating, investing, or financing. With only cash purchases of 20
-and depreciation of 10, gross fixed assets rise by 20 and net by 10; purchases are the gross
-increase, investing cash flow is −20, and the depreciation already in net income is an operating
-addback, so deducting it from the gross movement as well would count it twice. The statement
-delivers operating, investing, financing, and net cash flow and the opening balance or assumption
-behind the first visible change, and its net cash flow equals the balance-sheet cash change.
-
-## Comparisons and unusual results
-
-A comparison puts a plan and the actuals for the same periods side by side and explains the
-difference. The plan is the requested budget, saved plan, forecast, or upload; the actuals come from
-accounting, CRM, workforce, billing, saved results, or supplied figures. Without an official plan,
-budget performance is unknown, and a comparison against a labeled provisional plan is a what-if. The
-comparison uses the existing measure definitions and mappings, keeps unmatched categories visible
-outside the reconciled totals, and uses the latest complete period both sides cover, with a partial
-comparison carrying its cutoff as a label. A plan can sit in Forecast while the actual for the same
-Date sits in Actuals. Variance is actual minus plan,
-and with a known nonzero plan the percentage is variance over the plan's absolute value; a zero plan
-has an absolute variance only. Materiality and favorability are the company's. A saved comparison
-is a native view with the customer's budget label, layout, dimensions, and formula-derived
-differences.
-
-An anomaly is a claim about calculated financial results against a baseline, and a company history
-without an approved budget is a fine baseline. An all-clear is a real finding that covers only the
-scope and evidence checked: totals and reconciliations need observed coverage of their periods and
-members, and partial evidence supports a narrower finding while the rest stays open. A zero difference between two
-figures built from the same saved rows proves the model's arithmetic; a tie to a source compares the model's figure
-with a total the source system reports independently (its P&L, trial balance, or account balance). Operating expense
-and cost of revenue are the default scope of an unspecified spend check; a named scope is the scope.
-Payroll cadence, non-operating entries, intercompany transfers, credits, and eliminations
-each mean something different and are read as their own cases. The finding reports observed and
-expected amounts, the date the data reaches, supported drivers, and hypotheses labeled as such; a
-scheduled briefing compares with the last successful one and saves a dated page only when something
-changed.
-
-## What a finished model shows
-
-A working model, saved, with editable assumptions and formula-linked outputs across the horizon and
-the business's dimensions, showing the business in every row across the horizon. Its scenarios
-differ in inputs. Its record tables count into its totals: additive totals reconcile across one
-population, parents compute at their own grain, and gross profit and margin respond to the saved
-drivers. Its simulator and walkthrough exist. The roster reads the latest values and the monthly
-table per-period values, department and company figures agree with the employee rows in every
-period, and every payroll figure has one currency basis. The three deal states are separate
-measures, each deal counted once, placed by the date that governs its state, with the register
-reconciling to the totals. The requested statements are complete and scoped to the right entities
-and periods, every account maps once or is explicitly excluded, and each statement reconciles to
-its source or the answer names the remaining residual at the account level. Cash and liquidity
-claims keep their opening-balance basis and tell factual, forecast, and hypothetical values apart.
-
-The explanation names the method, the consequential assumptions, the commitments, the evidence
-gaps, and the risks: the conventions chosen, who is uncovered, which rows the source never had, and,
-for a restated source, that a record's repeated rows are one picture of that record per sync, so a
-period's history is the observation stamped in it rather than a count of rows.
-The saved result is linked in the turn that built it, and an explicitly requested static snapshot
-keeps that form.
-
-The generated reference below is the complete function inventory and the authority for every
-accepted spelling; its notes carry the places the engine differs from Excel.
+The generated reference below is the complete function inventory and the authority for every accepted spelling; its notes carry the places the engine differs from Excel.
 
 <!-- formula-syntax:start -->
 <!-- prettier-ignore-start -->
@@ -843,7 +307,7 @@ Use the preferred spelling. Accepted spellings still parse in stored formulas.
 | Logical | `and` `or` `not` |  |
 | Membership | `in` |  |
 
-- `%`: between two values `%` is modulo: `Months % 12`, `100 % 3`, `Months % -1`; after a number, `% -` is the number's percent and then a subtraction: `75% - Fee` is `0.75 - Fee`; a number's percent is one value: `50%` is `0.5`, `2 ^ 50%` is `2 ^ 0.5`; any other value followed by `%` and nothing else is its percent: `(a + b)%`
+- `%`: between two values `%` is modulo (`Months % 12`, `100 % 3`, `Months % -1`); a number with `%` is one percent value (`50%` is `0.5`, `2 ^ 50%` is `2 ^ 0.5`, and `75% - Fee` is `0.75 - Fee`); a trailing `%` after another expression is its percent (`(a + b)%`)
 - `in`: negate as `not in`
 
 Precedence, highest first: `( ), f( ), 5%; -x; ^ (right-associative, unlike Excel); x%; * / %; + -; < <= > >= = <>; in, not in; not; and; or`.
@@ -919,8 +383,8 @@ consequences that are easy to read past.
 - Function arguments are full expressions, so lookups, nested calls, and bare `and`/`or` are all legal inside `f( … )`.
 - **Bracket fallthrough.** A bracket that matches no predicate shape still parses as a date offset. `Revenue[Flag = (Active and Open)]` is a predicate lookup, while `Revenue[Flag = Active and Open]` becomes an offset expression. A clean parse does not prove the bracket means what you intended.
 - A formula address is a variable followed by one matching condition, such as `Revenue[]` or `Revenue$[Date.Month in any]`. It may cover one cell or many. Preserve the condition's matching mode, range, and variant when editing a saved rule. The condition carries its own brackets; a second bracket group is a parse error, not a second term group.
-- **Dimension items.** `$[Location = "East Coast"].Location` is a dimension-item literal: it pins one dimension to a string and looks that dimension back up, evaluating to the pinned value. Prefer this notation over a bare string whenever it could be ambiguous whether a dimension item is intended (comparisons like `this.Location = …`, values fed to filters); a bare `"East Coast"` is just text, while the literal names its dimension. Write it with the `$`: without it the lookup also inherits the current row's other dimensions and can return a different item depending on the row. Looking up a different property (`$[Location = "East Coast"].Revenue`) evaluates as that property's lookup at the pinned segment, like `Revenue$[Location = "East Coast"]`.
-- **Mapped dimensions read like values.** When a dimension's items come from a mapping (a lookup keyed by other dimensions), a lookup of it evaluates to its mapped item: `Bucket$[Account = "5001"]` is that account's bucket. Dot access follows the mapping keys — `this.Bucket` is the current segment's mapped item when the segment carries the keys. A field column reads the dimension at the table's axes the same way: beside Deal rows, a `Status` mapped from Stage has no rule and shows its catch-all on every row, and a text variable `Status$[Stage = Stage]` reads each deal's status through its own stage. Each dot hop desugars to a lookup keyed by the previous value, so `Account.Bucket` is `Bucket$[Account = this.Account]`, and hops keep going where mappings chain. The $ prevents unrelated dimensions such as Month from being inherited into this lookup. In a predicate the mapping runs the other way: `sum(Amount[Bucket = "COGS"])` gathers every source row whose account the mapping puts in COGS. A predicate on Bucket reads an authored variable at a grain that includes Bucket rather than filtering it; roll such a variable up through its key, `Amount$[Account.Bucket = this.Bucket]`.
+- **Dimension items.** `$[Location = "East Coast"].Location` is a dimension-item literal that pins one dimension to a string and reads that item back. Prefer it over a bare string in comparisons (`this.Location = …`) or filter values, and include `$` so row dimensions do not leak in. `$[Location = "East Coast"].Revenue` reads `Revenue$[Location = "East Coast"]`.
+- **Mapped dimensions read like values.** `Bucket$[Account = "5001"]` evaluates to that account's mapped bucket, and `this.Bucket` or `Account.Bucket` (`Bucket$[Account = this.Account]`) follows mapping keys across dot hops without inheriting unrelated dimensions like Month. In predicates, `sum(Amount[Bucket = "COGS"])` groups source rows by mapped bucket, while authored variables roll up through their key (`Amount$[Account.Bucket = this.Bucket]`).
 
 | Formula | Composes |
 | --- | --- |
@@ -943,7 +407,7 @@ Use the preferred name. Accepted aliases still parse in stored formulas.
 - `min(value: number | date, value2...: number) -> number | date | null`: Takes 1 to 10 arguments. Empty input: null. One date or datetime argument returns the earliest; several arguments must be numbers.
 - `max(value: number | date, value2...: number) -> number | date | null`: Takes 1 to 10 arguments. Empty input: null. One date or datetime argument returns the latest; several arguments must be numbers.
 - `average(value: number, value2...: number) -> number | null`: Takes 1 to 10 arguments. Empty input: null. *(accepted: `avg`)*
-- `count(value: any, value2...: any) -> number`: Takes 1 to 10 arguments. Counts non-empty values in one or more expressions. It works like Excel COUNTA, not Excel COUNT. A bracketed read keeps each dimension it filters on, and its condition on a dimension takes the place of the row's item of that dimension. So `count(Deal[Region in {"East", "West"}])` counts each deal once for every one of those Region items its records carry, and on a deal's row it counts that deal's items among them. `count(Deal$[Deal where count(Deal[Deal = Deal, Region in {"East", "West"}]) > 0])` counts each deal once, and its condition on Deal gives every deal's row that same total. On a deal's row, `if(count(Deal[Region in {"East", "West"}]) > 0, 1, 0)` is 1 for a deal with records in East or West and 0 for any other.
+- `count(value: any, value2...: any) -> number`: Takes 1 to 10 arguments. Counts non-empty values (like Excel COUNTA). A bracketed condition keeps filtered dimensions and replaces the row item: `count(Deal[Region in {"East", "West"}])` counts Deal × Region pairs, `count(Deal$[Deal where count(Deal[Deal = Deal, Region in {"East", "West"}]) > 0])` counts distinct deals, and `if(count(...) > 0, 1, 0)` flags a deal.
 - `first(value: T, source2...: T) -> T | null`: Returns the first nonnull value in series order. With multiple arguments, reduces each argument with FIRST and selects the first nonnull result from left to right. Dates order values within each argument only. Errors are not null.
 - `last(value: T, source2...: T) -> T | null`: Returns the last nonnull value in series order. With multiple arguments, reduces each argument with LAST and selects the first nonnull result from right to left. Dates order values within each argument only. Errors are not null.
 - `stdev(value: number, value2...: number) -> number | null`: Takes 1 to 10 arguments. Returns sample standard deviation (ddof=1) pooled across one or more numeric expressions, or null with fewer than two values. *(accepted: `stddev`)*

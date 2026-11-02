@@ -5,215 +5,50 @@ description: Rebuilding someone else's model — a workbook, an export, a render
 
 # Import model
 
-An import rebuilds the business model that the source files represent as native variables,
-dimensions, scenarios, formulas, and saved tables. The source describes relationships and outputs to
-preserve; the rebuilt model is what makes them editable.
+An import rebuilds an external spreadsheet, export, or document as a native, editable cfo.ai model of variables, dimensions, scenarios, formulas, and saved tables (`[[build-model]]`, `[[build-visualizations]]`, `[[connect-data-sources]]`).
 
-A ported formula preserves business meaning, not spreadsheet positions. The build-model skill's
-generated formula reference is the authority for every accepted spelling, and its notes carry the
-places the engine differs from Excel.
-
-A clear import request authorizes the ordinary work within its scope. Without a narrower scope, you
-cover every business-relevant section, period, scenario, statement, and view the source presents.
-The source files stay as they are.
-
-The build-model skill carries the formula and table mechanics and the statements and headcount
-judgment; build-visualizations lends its judgment where a source calls for a visual.
-
-## A workbook over connected data
-
-When a workbook's source sheets are exports of a system already connected in cfo.ai, the connection
-supplies the data and the workbook supplies the business formulas, mappings, and views.
-connect-data-sources describes how those records reach the model and what their readiness proves;
-build-model describes the formulas and mappings over them.
-
-The workbook's visible report and dashboard sheets become pages over the connected data, preserving
-their sections, comparisons, and charts. Exported numbers and comparisons against the workbook belong
-in your own reconciliation checks and appear on pages only when the person asks. Matching periods
-and source coverage make those checks meaningful; later source changes can explain differences from
-the export, with the findings in the chat.
+- **Preserve business logic over cell coordinates**: Translate spreadsheet formulas into named variables and dimensions using the canonical formula reference in `[[build-model]]`.
+- **Default scope**: Unless the user narrows the scope, rebuild every business-relevant visible section, period, scenario, statement, and view while leaving the source files unchanged.
+- **Workbooks over connected sources**: When source tabs export a system already connected in cfo.ai, read the data from the live connection (`[[connect-data-sources]]`) and rebuild the workbook's formulas, mappings, and report views over it. Keep export-vs-live comparisons in chat and reconciliation checks unless requested on a page.
 
 ## Which sheets a workbook presents
 
-A workbook presents its visible sheets. A hidden sheet, very hidden ones included, is one its
-author keeps out of view: a rebuild of the workbook covers the visible sheets and the hidden cells
-they read, and the import's source map, its record of each sheet and where it went, names every
-other hidden sheet as hidden. A request that names a hidden sheet brings it into scope.
+A workbook presents its visible sheets. A rebuild of the workbook covers the visible sheets and the hidden cells they read, and the import's source map names every other hidden sheet as hidden. A request that names a hidden sheet brings it into scope.
 
-## What the source decides
+## Survey, Source Map, and Navigation
 
-How much of a source carries over is a finding of the import, learned from the file. Before the file
-is read, what you know is the method you will follow: survey the file, map its sections, rebuild
-them natively, and reconcile each against the source. Which sheets the readers open whole, which
-sections rebuild, and how closely each matches are what that work finds. The outcome depends on the
-file: its size, which formulas have a native form, and which values come from macros or external
-links. Each section's fidelity is established by its own reconciliation, and a large workbook is a
-staged rebuild that runs well past one reply.
+- **Stage claims by evidence**: Before reading the file, describe only your import method. After surveying the file, report its structure and scope. Claim numeric parity only for sections verified by reconciliation.
+- **Source map**: Record each sheet and cell range, its purpose, its periods, its attachment ID (`runway-file-…`), and its destination (rebuilt page/variables, ingested CSV source table, or existing connection/query).
+- **Page and table mapping**:
+  - Each in-scope worksheet of assumptions, calculations, or reports becomes a page of the same name, and each labeled section across the full used range becomes a table block.
+  - Collapse multiple sheets that repeat an identical layout per item (such as per product or region) into a single page over a shared dimension.
 
-A person deciding whether to hand over their model decides on what you tell them, so your account
-of an import tracks what you know at that moment: the method before the file arrives, the survey's
-findings once it is read, and parity for the sections reconciliation has proven.
+## Separating Data, Calculations, and Scenarios
 
-## The source's shape is the model's navigation
+| Source pattern                                                       | How to rebuild natively in cfo.ai                                                                                                                                                                                                                                   |
+| -------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Transaction rows & leaf exports (`>200` fixed values)**            | Prepare a CSV at the records' true grain (keeping distinct measures in separate columns and naming source date columns with a business name rather than `Date`), load via `edit_integrations` `ingest_csv`, and map via a saved query (`[[connect-data-sources]]`). |
+| **Tunable assumptions**                                              | Create named editable input variables with typed opening/literal cells. Preserve exact stored inputs and dated changes (including zeros).                                                                                                                           |
+| **Repeated row groups, per-item tabs, or column bands**              | Model as one variable broken down by a business dimension rather than creating per-item variables.                                                                                                                                                                  |
+| **Account/category lookup tables**                                   | Model as dimensional mappings (`[[build-model]]`) rather than hardcoded formula filters.                                                                                                                                                                            |
+| **Case selectors, duplicate case tabs, or `FY26 Budget` columns**    | Model as separate scenarios sharing the same variables and `Date` axis (never as an additive dimension). Inspect existing scenarios first.                                                                                                                          |
+| **Statement totals, derived subtotals & copied calculation outputs** | Treat as reconciliation targets that native formulas must reproduce—never ingest them as raw data rows or use copied outputs as model inputs. (Preserve parent rows that carry direct postings.)                                                                    |
 
-Each in-scope worksheet that presents assumptions, calculations, or reports becomes a page with the
-same name, and each source-labeled financial section becomes a table named after it. Sheets containing
-only source records are covered by entries in the source map. A section's heading and cell range mark
-its review boundary, even when several sections feed one calculation.
+## Time Boundaries and Formula Translation
 
-When several sheets are copies of one layout repeated per item, they are one page holding a shared
-dimensioned variable, not one page per copy.
+- **Source close vs. Last close**: Reconcile against the source's closed period. If the scenario's Last close differs, you may move Last close to match (explaining the change), but never extend `Actuals` across forecast periods just to force parity.
+- **Operational vs. annual dates**: Keep operational observations beyond the accounting close distinct from projections, and do not spread annual observations into months without an explicit allocation rule.
+- **Translating formulas**:
+  - Preserve operands, constants, date windows, and calculation methods while replacing cell coordinates with named variables, dimensions, opening recurrence seeds, and `LAST` stock rollups (`[[build-model]]`).
+  - Never silently substitute a different forecasting method. If a source lacks formulas, build defensible native logic with editable inputs and state that the source held values only.
 
-The whole used extent counts — the sections below and beside the first table too. A page with the
-right tab name proves only that the page exists; each section needs its own disposition and
-reconciliation before the worksheet is covered. Disclose any reader limit you cannot recover from.
+## Reconciliation, Task Decomposition, and Version Updates
 
-A source map, in the plan or a small saved summary, records each sheet and range, what it is for,
-its periods, and where it went: the pages and variables it became, the source table loaded from the
-workbook, or the existing connection and saved query that already supply its rows. A saved summary
-names the source file by its attachment id, such as `runway-file-…`, which is how a later version of
-the same source finds it.
-
-## Data, calculation, and presentation are different things
-
-Transaction exports and report leaf rows are observations. They reach the model at their real
-grain, with stable identities, full parseable dates, currency and signs intact, and the row-level
-business dimensions they carry.
-
-Statement totals, copied calculation outputs, and derived subtotal columns are reconciliation
-targets — the numbers the rebuilt model has to reproduce, not rows to ingest.
-
-A parent row that carries postings keeps them. A source calling a row a header does not make its
-activity disappear. Notes and scratch tallies belong in the model only when labels and formula
-dependencies say they feed it.
-
-Repeated row groups, per-item sheets, and recurring column bands are usually one variable segmented
-by a business dimension. Recovering that dimension is the import; a separate variable per product,
-department, or region is the spreadsheet's limitation copied in.
-
-A classification that belongs to a source observation stays on the imported rows. One derived from
-another dimension — statement bucket by account — is a mapping keyed by that dimension. Write and
-check it through the model's own operations, so the mapping and everything that reads it are
-visible in one place.
-
-Case-selector cells, duplicated case sheets, plan-versus-actual bands, and mutually exclusive case
-rows are scenarios. Shared variables and Dates stay shared, and you write only what differs by case
-per scenario. A column labeled `FY26 Budget` can carry both a Date and a scenario. A scenario is never
-an additive dimension. Inspect the existing scenarios before creating any, and leave the unrelated
-ones alone.
-
-Exact stored inputs and their dated changes, zeros included, carry over, and how each set lands
-follows from how the calculation treats it. A typed input is a saved rule of its own at its cell's
-coordinates, and the calculation evaluates every rule a variable holds, so a grid of typed values
-is as many rules as it has cells. A source table is read as data: its rows are records that
-variables read through their aggregation, one rule for all of them. A large set of fixed values,
-such as a history sheet, a roster, or a list of transactions, anything past a few hundred values,
-is therefore read from a source table. For records not already supplied by a connection, the
-workspace prepares that table from the workbook as a CSV at the records' real grain, with the sheet's
-dates as a column, and `edit_integrations` `ingest_csv` loads it, inline when it is small and through
-its upload slot when it is large. The loaded table reaches the model's variables once a saved query
-maps it into the model, as connect-data-sources describes. A small set of tunable assumptions, the
-drivers a person changes to move the plan, become named editable variables with
-typed inputs. Computed outputs stay targets.
-
-Distinct measured quantities keep separate columns — melting them into a name-and-value pair creates
-the wrong entries. A source datetime column gets a business name, not `Date`. An annual observation
-does not spread into months without an explicit allocation decision.
-
-## Source time
-
-The source has a closed period of its own, and reconciliation happens against it. When it differs
-from the scenario's Last close, Last close can move to serve the rebuild; explain the effect. Never
-extend Actuals across the horizon just to force parity.
-
-An imported variable that shows zero after Last close has real forecast logic in the source to
-rebuild, or the source's own timeline to follow.
-
-A source observation beyond the accounting close can be genuine on its operational timeline. Keep
-that distinction rather than relabeling projections as actuals.
-
-Each imported measure has one authoritative source date, aligned on the shared Date axis.
-
-## A faithful formula
-
-A healthy source formula translates by keeping its operands, constants, method, date windows, and
-dependencies, with spreadsheet positions replaced by named variables and dimensions.
-
-One rule covers many months or items. How far it reaches comes from what the spreadsheet meant, not
-from how many cells repeated it.
-
-Lookup tables become mappings, selector logic becomes scenarios, and time windows become native
-expressions. A running balance starts from its own actual historical value or an exact opening cell.
-Quarterly or yearly stock figures are closing values, not sums.
-
-A different forecasting method is a redesign, not an import, and never a silent substitution.
-
-A source without formulas cannot prove its relationships. Rebuild the most defensible native logic,
-make missing inputs editable assumptions, and claim none of it as source-formula parity. Read a
-source formula before you claim to reproduce it. Source outputs stay parity evidence, not
-dependencies of the new model.
-
-## What reconciliation proves
-
-Compare every section in the source map with the saved content, later rows and columns included.
-
-Equal totals can hide offsetting errors, so reconciliation covers identities and values as well as
-results, on both sides of meaningful formula boundaries, for actuals, forecast values, material
-business slices, and scenario-specific results. A discrepancy says where to look next, and an
-upstream change reopens what it touches.
-
-A source error that healthy neighboring formulas expose can be corrected; report both the source
-result and the corrected logic. Stale caches, dead external links, unsupported source claims, and
-disclosed redesigns are each a different kind of mismatch from an unexplained one.
-
-A driver test shows how a rebuilt relationship responds at its periods and dimensions. When the
-relationships support extending past the source horizon, check that continuation too.
-
-Partial work resumes from the saved model, the source dispositions, the mappings, and the open
-discrepancies. Apply a proven correction to every earlier surface it affects.
-
-When the rebuild runs as a task, do the survey and the decisions above in the conversation, and
-put in the brief what they settled: the source map, the boundary and units, the scenario plan,
-the mappings, and the target shape in the model's terms, which sets are dimensions and which
-measures they segment. The brief is findings; what a step must do goes in that step's
-instruction. The shared step builds only what every area reads: the Date axis, Last close, the
-dimensions, the mappings, the scenarios, and the saved summary that holds the source map, and no
-sheet's tables. One step per business area follows, and each depends on the shared step only.
-Where an area needs another area's numbers, it loads the workbook's values as inputs and names
-them in its report; a dependency between two areas runs them one at a time. Not every worksheet
-is the same size. One that is far larger than the rest, in rows, in periods, or in formulas that
-read other sheets, is too much for one step: give it one step per section of the sheet, each
-depending on the one before it, so they write into the page named after the sheet one at a time.
-Each step's criteria include reconciling its own sheets to the workbook, later rows and columns
-included. The last step checks what crosses areas: it replaces the inputs loaded from other
-areas with references, then confirms the relationships the source map links between areas, the
-statement identities, the cash recurrence, and the scenario responses, not a second read of
-every sheet. Each step names the sheets, sections, and formulas it works from and sets `verify:
-true`: a rebuilt section is worth checking at any effort level.
-
-## A newer version of the source
-
-A connected spreadsheet arrives again as a new attachment each time it changes, and the version
-the model was imported from stays attached beside it. Updating the import compares the two
-versions section by section, guided by the source map. A changed section's tables, formulas, and
-inputs follow the new version, and a section loaded as a source table reloads into the connection
-that holds it. A new section gets a disposition like any other, and a removed
-section leaves the model or stays for a named reason. Sections that did not change keep what the
-model holds, including edits people made in cfo.ai. Reconciliation covers every changed section
-against the new version, and the source map then names the new version's attachment id.
-
-## What a finished import shows
-
-Every in-scope section and its periods are imported, rebuilt, intentionally excluded, or blocked for
-a named external reason. Unread ranges are incomplete.
-
-The shared variables, business dimensions, visible axes, scenario identities, source-date bindings,
-and mappings are present and verified. Imported values and forecast assumptions stay
-distinguishable, and copied outputs never stand in for editable logic.
-
-Reconciliation checks compare saved statements and views with their supported source values;
-the handoff names the exact discrepancies that remain.
-
-The handoff names what you imported, what you rebuilt, which assumptions are provisional, which
-source defects you corrected, what is unmapped, and what is still open, and it keeps person-level
-source privacy. Source analysis alone is not an import.
+- **Section-by-section reconciliation**: Verify every section in the source map (including later rows and columns, subtotals, formula boundaries, actuals, forecasts, and scenarios) against the source file. If neighboring formulas expose a clear formula bug in the source, report both the original source figure and the corrected calculation.
+- **Running as a multi-step background task**:
+  1. Complete the workbook survey and source map in the foreground conversation and put those settled findings in the task brief.
+  2. **Shared foundation step**: Create the `Date` axis, Last close, dimensions, mappings, scenarios, and saved source-map summary (no sheet tables).
+  3. **Area build steps (`verify: true`)**: One step per business area (or sequential per-section steps for oversized sheets) that builds the area's tables and reconciles them against the source. If an area needs numbers from another area not yet built, load the workbook's values as temporary inputs and note them.
+  4. **Cross-area tie-out step (`verify: true`)**: Replace temporary cross-area inputs with live variable references and verify cross-sheet links, statement identities, cash recurrence, and scenario behavior.
+- **Updating from a newer workbook version**: When a newer attachment arrives, compare it section by section against the prior attachment ID in the source map. Build newly added sections, remove or retire deleted sections, update changed tables/formulas, reload changed CSV source tables, preserve cfo.ai edits in unchanged sections, re-reconcile changed sections, and update the source map's attachment ID.
+- **Handoff summary**: State what was imported, what was rebuilt, provisional assumptions, corrected source defects, unmapped items, and any remaining discrepancies.
