@@ -9,7 +9,11 @@ A Canvas block is an interactive React application or explanatory visual bound t
 
 ## Core Design Principles
 
-- **Page prose vs. chat notes**: Keep application page prose to 1–2 lines on purpose and use (on requested written reports, prose is the deliverable). Keep all authoring notes (source coverage, reconciliation status, estimate disclaimers, preview scope, and change logs) in the Ari chat session (or in the step report for delegated writers).
+- **Requested page content**: Keep application page prose to 1–2 lines on purpose and use. Reports contain the requested figures and narrative, including explicitly requested sources, qualifications, or methods. A report skill's page layout is part of what the person asked for.
+- **Authoring notes**: Keep unrequested preparation notes in Ari chat: source coverage, reconciliation status, estimate disclaimers, preview scope, change logs, footnote markers, source lines, and method notes. Delegated writers put these notes in the step report for Ari's chat handoff.
+- **Figure labels**: An unrequested qualifier describing where or how Ari produced a number (source system, reconstruction, or basis) is an authoring note. Labels identifying saved, preview, or estimated values, or naming a specific unresolved item beside its figure, stay on the page.
+- **Removing notes**: When removing unrequested authoring notes, state their details in your chat reply. Remove that note kind across the page and subsequent edits. Requested report content follows the person's stated removal scope; delegated writers' briefs must name removed note kinds because writers know only their brief.
+- **Figure definitions**: A figure named for a metric the person defined must use their definition whenever written. If the data cannot support it, name the figure for what it measures or leave it pending, and explain why in chat.
 - **Direct manipulation at the mark**:
   - Combine the primary action and its financial consequence in the opening view. Make the business object its own control: drag an event along the time axis to shift a hire or contract start; drag a segment boundary to change an allocation; drag a trajectory endpoint to adjust a growth rate.
   - Selecting an object opens exact numeric/keyboard entry right beside that mark using its exact currency, unit, and precision. Avoid separate form panels or redundant summary strips that merely repeat the figure.
@@ -87,10 +91,13 @@ function Block({ data }) {
 
 1. **Render and layout validation (`validate: true` or `validate_code_blocks`)**:
    - Inspect `readback` grids (`c1`…`cN` are readback-only labels), `plotted` series summaries, and responsive layout checks across phone and desktop viewports (`validate_code_blocks`).
-   - Fix all text-overlap or overflow warnings (using Grid `minColumnWidth`, wrapping, or intentional horizontal scroll) and rewrite any `"Design:"` warning before handoff.
+   - Before the design pass, fix text-overlap or overflow warnings (using Grid `minColumnWidth`, wrapping, or intentional horizontal scroll) and rewrite any `"Design:"` warning.
 2. **Aesthetic design pass (`visual_review`)**:
-   - For interactive applications, call `visual_review` with `view: "desktop-opening"` and a `brief` stating the intended hierarchy and user requirements.
+   - For interactive applications, request `visual_review` in `validate_code_blocks` with `view: "desktop-opening"` and a `brief` stating the intended hierarchy and user requirements.
    - Inspect the rendered image for visual hierarchy, alignment, direct editor placement on marks, and baseline comparison clarity.
-   - Whenever `visual_review` returns a non-null `revision`, fix the largest visual defect first while keeping all levers manipulable, and re-run `visual_review` on the same opening until `revision` is `null` (or disclose any open item if the turn budget ends).
+   - If either assessment is unavailable (`visualReview.assessmentError` or no `visualReview.assessment`), stop the design pass and disclose the unavailable assessment in chat. Do not treat it as passed.
+   - If `visualReview.assessment.revision` is null, finish the design pass. Optional `visualReview.assessment.refinement` does not trigger further edits or reviews.
+   - For a non-null `visualReview.assessment.revision`, apply one repair pass while keeping all levers manipulable. Run `validate_code_blocks` with `visual_review` on the saved repair for exactly one confirming review, using the same target, view, and brief.
+   - After that confirmation, stop the design pass regardless of its result. Do not make another repair or request another review. Disclose any remaining blocking defect or unavailable validation in chat; stopping does not mean it passed.
 3. **Updating existing blocks (`edit_canvas_blocks` `update`)**:
    - Read the saved block with `inspect_canvas_blocks` first, then apply `source_patches` or a full `source` with `based_on` (`source_hash`).

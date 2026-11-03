@@ -48,6 +48,7 @@ A cell is one variable at one member of each of its dimensions (plus one period 
 - **Absolute reads (`$`) for coarser inputs**: If an input has fewer dimensions than the current cell (for example, `Weekly listeners` by `Territory` and `Month`, with no `Listening tier`), a relative read at `Chorus × Eastmere × March` finds no `Chorus` value and returns `0`. Pin only the coordinates the input carries with `$`:
   - Dated 1D input: `` `Weekly listeners`$[Territory = this.Territory, Date.Month = this.Date.Month] ``
   - Timeless 1D input: `` `Tier fee`$[`Listening tier` = this.`Listening tier`] ``
+  - A row's formula also applies to breakdown lines without their own formula; when the formula does not vary by the breakdown dimension, a coarser absolute read repeats its amount on each line, so N such lines sum to N times that amount for a SUM variable.
 - **Coordinate overrides (`[...]`)**: Brackets replace specified coordinates and keep the rest: `` `Listening revenue`[Territory = "Eastmere"] `` reads Eastmere at this cell's tier and month, and ``sum(`Listening revenue`[Territory in any])`` sums all territories at this cell's tier and month. Outside `where`, `Dimension` and `this.Dimension` are equivalent.
 - **Inside `where` clauses**: Inside `where`, a plain name refers to the candidate record's key, while `this.<Dimension>` refers to the current cell's member. Predicate values accept expressions such as `Date.Month = startofmonth(`Last Snapshot Month`$)`.
 - **Keeping vs. replacing drilled coordinates**: Filtering a second dimension keeps the row's drilled coordinate (``sum(Amount[`Account Type` = "Income"])`` broken down by `Account` shows each account's amount), whereas filtering `Account` itself (`sum(Amount[Account in {"A", "B"}])`) replaces the row's account and repeats the combined sum on every row.
@@ -167,6 +168,18 @@ sum(Amount$[Account.Bucket = this.Bucket, Date.Month = this.Date.Month])
 - **Time-series vs. record tables**: Time-series tables put variables on rows and `Date` on columns; record tables put a record key (`Employee ID`, `Deal`) on rows and variables/dimensions as field columns. Keep large record tables fast by displaying only requested columns and filtering the row dimension to relevant records.
 - **Display windows & formatting**: Set `window` explicitly on the table when a report specifies a start and end date, and apply table-specific `format_updates` at the broadest applicable scope (variable-level format acts as the model default).
 
+## Pages and supporting work
+
+| Work                                                                                                  | Placement                                                                                                                                                                     |
+| ----------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| A forecast, dashboard, tracker, report, schedule, or interactive tie-out the person asks you to build | This is the deliverable, even without the word "page". Create or reuse its own page. Keep tables created for it together with its visuals.                                    |
+| Supporting checks and evidence from doing that work                                                   | Reuse a workspace-visible page in `Main` that already holds the same kind of checks or evidence. A report or other deliverable page is not a destination for supporting work. |
+| Supporting work with no suitable checks page                                                          | Create one top-level **Ari's working papers** in `Main`, with audience `workspace` when page audiences are enabled. Reuse it across tasks.                                    |
+| A separate page explicitly requested by the person                                                    | Create that page with the requested content.                                                                                                                                  |
+
+- **Working-papers scope**: Pass `Main` explicitly on every page or block call targeting working papers, including destination lookup. Identify each check's source scenario. Preserve other blocks and existing audiences; never repurpose a private page as shared working papers.
+- **Private sketches**: `[[sketch-answers]]` uses the person's private **Ari's scratchpad** for a visual answer to one question. Save durable live checks and team evidence on working papers, not the scratchpad.
+
 ## Scenarios
 
 - **Scenarios vs. dimensions**: Use dimensions for segments that coexist and add up within one plan (regions, tiers, departments); use scenarios for mutually exclusive business futures (Base, Upside, Downside). Scenarios inherit unchanged rules and inputs from their base while keeping imported source records shared and read-only.
@@ -180,7 +193,16 @@ Answers to open items and exceptions usually live in the tabs of attached workbo
 When a finding contradicts a saved model value, the answer names that value, its table, variable, any dimension items, period (when dated), and the corrected value. This identifies the remaining model change, including when another chat saved the original.
 
 - **Readback verification**: A write receipt with `status: "applied"` proves what changed, replaced, tied, or failed. Verify dated calculations on system `Date` across starting, middle, and ending periods using a member whose state changes inside the window (a hire start, termination, rate change, or FX conversion) plus coarse period rollups.
-- **Tracing discrepancies & driver sensitivity**: Compare calculated record cells against source facts (for example, a salaried employee's full month equals annual rate divided by 12). When testing driver sensitivity in Main, remember that an input edit is a live save and must be restored if temporary.
+- **Tracing discrepancies & driver sensitivity**: Compare calculated record cells against source facts (for example, a salaried employee's full month equals annual rate divided by 12).
+
+New scenarios are saved and listed for teammates immediately. Edits in Main or another shared scenario stay live for everyone until restored.
+
+| Saved work                                                                                           | Before handoff                                                                                                           |
+| ---------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| A plan requested by the user or a planning alternative Ari chose to deliver (Base, Upside, Downside) | Keep the scenario and its planning assumptions after verification. An explicit request for that scenario is unnecessary. |
+| A scenario created solely to check a build, with no role in the delivered plan                       | Delete it with `edit_scenarios` `delete` once the check finishes, before ending the turn. The receipt supports undo.     |
+| Temporary test inputs in Main or another shared scenario                                             | Restore the original inputs.                                                                                             |
+
 - **Performance & scale rules**:
   - **Use only necessary time grain**: Prefer monthly or yearly queries and formulas when daily grain does not change the answer.
   - **Write general formulas**: Reference `Date` and `this.<Dimension>` rather than duplicating rules per year or item.
