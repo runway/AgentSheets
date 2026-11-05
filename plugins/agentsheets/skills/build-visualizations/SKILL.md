@@ -5,7 +5,7 @@ description: Build model-connected Canvas visualizations and interactive applica
 
 # Build visualizations
 
-A Canvas block is an interactive React application or explanatory visual bound to live model datasets (`[[build-model]]` owns native tables). Match its scope to the user's question: a focused decision gets a focused simulator; a complete model build closes with a system-wide simulator showing the primary outcome over time and the few levers that move it most.
+A Canvas block is an interactive React application or explanatory visual bound to live model datasets (`[[build-model]]` owns native tables). Match its scope to the user's question: a focused decision gets a focused simulator; a full model build closes with a system-wide simulator showing the primary outcome over time and the few levers that move it most.
 
 ## Core Design Principles
 
