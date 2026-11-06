@@ -11,6 +11,13 @@ An import rebuilds an external spreadsheet, export, or document as a native, edi
 - **Default scope**: Unless the user narrows the scope, rebuild every business-relevant visible section, period, scenario, statement, and view while leaving the source files unchanged.
 - **Workbooks over connected sources**: When source tabs export a system already connected in cfo.ai, read the data from the live connection (`[[connect-data-sources]]`) and rebuild the workbook's formulas, mappings, and report views over it. Keep export-vs-live comparisons in chat and reconciliation checks unless requested on a page.
 
+## Workbooks Shared in Conversation
+
+- **Question first**: When the person asks about the workbook, answer from the file before rebuilding. Say in the reply that the rebuild started or finished.
+- **Lines already in the model**: When the workbook's lines already exist in the model, as after an earlier import or in a workbook exported from this workspace, update those variables instead of adding copies (see "Updating from a newer workbook version").
+- **Comparison tables**: Tables that compare results with the workbook read the rebuilt variables, not typed copies of its results.
+- **Recorded values**: A file of recorded values, such as a bank export, aging report, timesheet, or statement whose only formulas are subtotals, is source data for `[[connect-data-sources]]`, not a model to rebuild.
+
 ## Which sheets a workbook presents
 
 A workbook presents its visible sheets. A rebuild of the workbook covers the visible sheets and the hidden cells they read, and the import's source map names every other hidden sheet as hidden. A request that names a hidden sheet brings it into scope.
