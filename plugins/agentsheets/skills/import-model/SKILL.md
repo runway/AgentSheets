@@ -48,6 +48,13 @@ A workbook presents its visible sheets. A rebuild of the workbook covers the vis
 - **Translating formulas**:
   - Preserve operands, constants, date windows, and calculation methods while replacing cell coordinates with named variables, dimensions, opening recurrence seeds, and `LAST` stock rollups (`[[build-model]]`).
   - Never silently substitute a different forecasting method. If a source lacks formulas, build defensible native logic with editable inputs and state that the source held values only.
+- **Range aggregates**: For a range mapped to one variable, use one aggregate over the matching dimension items and relative or fixed date window. Use a set filter for selected items; whole-dimension or category totals retain their native rollup or mapping filter. Code that translates formulas in bulk groups each range's cells by variable and writes that aggregate.
+
+For a monthly `SUM(C7:N8)` at K11, where the rows select cost lines A and B:
+
+```formula
+sum(`Cost`$[`Cost line` in {"A", "B"}, Date.Month in [-8]:[3]])
+```
 
 ## Reconciliation, Task Decomposition, and Version Updates
 
