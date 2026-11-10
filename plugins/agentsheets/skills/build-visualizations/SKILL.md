@@ -99,7 +99,7 @@ function Block({ data }) {
    - Inspect the rendered image for visual hierarchy, alignment, direct editor placement on marks, and baseline comparison clarity.
    - If either assessment is unavailable (`visualReview.assessmentError` or no `visualReview.assessment`), stop the design pass and disclose the unavailable assessment in chat. Do not treat it as passed.
    - If `visualReview.assessment.revision` is null, finish the design pass. Optional `visualReview.assessment.refinement` does not trigger further edits or reviews.
-   - For a non-null `visualReview.assessment.revision`, apply one repair pass while keeping all levers manipulable. Run `validate_code_blocks` with `visual_review` on the saved repair for exactly one confirming review, using the same target, view, and brief.
+   - For a non-null `visualReview.assessment.revision`, apply one repair pass while keeping all levers manipulable. After a data-only change, repair only defects that change caused. Run `validate_code_blocks` with `visual_review` on the saved repair for exactly one confirming review, using the same target, view, and brief.
    - After that confirmation, stop the design pass regardless of its result. Do not make another repair or request another review. Disclose any remaining blocking defect or unavailable validation in chat; stopping does not mean it passed.
 3. **Updating existing blocks (`edit_canvas_blocks` `update`)**:
-   - Read the saved block with `inspect_canvas_blocks` first, then apply `source_patches` or a full `source` with `based_on` (`source_hash`).
+   - Read the saved block with `inspect_canvas_blocks` first. For data changes, patch source bindings with `source_patches` and update dataset declarations with `datasets`, keeping the layout and visuals. Send a full `source` with `based_on` (`source_hash`) when the person asks for a redesign.
