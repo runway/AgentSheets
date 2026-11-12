@@ -64,6 +64,7 @@ Each declared dataset (`data.<name>`) evaluates before `Block` renders, so decla
 - **Time-series vs. record-list orientation**:
   - **Time-series charts**: Put variables (and breakdowns) in `layout.rows` and `Date` in `layout.columns`. `dataset.rows` holds one entry per time period (`xKey: "date"`), and `dataset.series` holds the value series (`key`, `label`, `variable`, `segments`). If `dataset_evidence` reports `period_count: 0` with dates in `series_names`, swap rows and columns.
   - **Record lists**: Put fields in `layout.rows` (using `useAs: "VARIABLE"` for mapped dimensions) and the record identity dimension matching the source grain in `layout.columns` with `NO_GRANULARITY`, validating mapped fields against source records so coarser keys do not collapse distinct item values. Each `dataset.rows` item is one record (`date` holds the record label, `row[entry.key]` holds each field value).
+- **Dataset audience**: A filter in the code changes only what the block draws. Each dataset a reader can access reaches that reader and the page's Excel download whole, including rows the code filters out. To show some items of a dimension, list them in the dataset's `include`.
 - **Avoid double-counting**: In `dataset.series`, empty `segments` represent the unsegmented parent variable and populated `segments` represent breakdown items. Never stack a parent total together with its own children.
 
 ```jsx
