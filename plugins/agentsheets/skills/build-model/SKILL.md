@@ -28,13 +28,20 @@ A cell is one variable at one member of each of its dimensions (plus one period 
 
 - **Inputs vs. formulas**: A cell holds either a literal input (an opening count, fee, or growth rate that the operator controls) or a formula calculated at each cell's coordinates. Typed grid values save one rule per cell, so use formulas for calculated series rather than grids of repeated literals.
 - **Date grain & range (`Actuals` vs. `Forecast`)**: A formula's condition sets its `Date` grain (a `Month` rule reaches dimensions at `Month`; a daily forecast requires `Day` coverage). `Actuals` and `Forecast` have separate rule slots; write both when a formula applies across the whole horizon.
-- **Opening seeds & recurrences (`[-1]`)**: Seed dated assumptions in the last `Actuals` month and carry them forward with a `Forecast` formula so every future month responds to the assumption:
+- **Opening seeds & recurrences (`[-1]`)**: Type a dated assumption's opening value into the last `Actuals` month and save its carry-forward formula on both `Actuals` and `Forecast`; the typed value wins in its month. When `Last close` moves forward, the newly closed month uses the `Actuals` formula. Saved on `Forecast` only, it reads `0` and later months continue from `0`.
 
 ```formula
 `Weekly listeners`[-1] * (1 + `Listener growth`$[Territory = this.Territory])
 ```
 
-- **How `[-1]` resolves at the boundary**: In the first `Forecast` month, `Weekly listeners[-1]` reads the last `Actuals` month's input, imported value, or `Actuals` rule (or `0` if none exists). For cash, seed opening cash in the last `Actuals` month and add `Net Cash Flow` to the prior balance in `Forecast`.
+- **Months before the opening value**: The `Actuals` formula also calculates there, and the calendar's first month reads an empty `[-1]`, so a running balance adds up those months' flows. Return `NULL` while the prior month is empty to keep those months empty:
+
+```formula
+if(`Weekly listeners`[-1] = null, NULL, `Weekly listeners`[-1] * (1 + `Listener growth`$[Territory = this.Territory]))
+```
+
+- **How `[-1]` resolves at the boundary**: In the first `Forecast` month, `Weekly listeners[-1]` reads the last `Actuals` month's input, imported value, or `Actuals` rule (or `0` if none exists). For cash, type opening cash into the last `Actuals` month and add `Net Cash Flow` to the prior balance in both ranges, with the same `NULL` return in `Actuals`.
+- **Recurrences on imported variables**: An `Actuals` rule replaces an imported variable's source read in every `Actuals` month, so its recurrence stays on `Forecast` only.
 - **Single-cell overrides**: A one-cell override pins only that coordinate; removing it restores the default formula and updates parent and period rollups.
 - **Empty & null semantics**:
   - Unset variable cells read `null` for date/text types (`End Date = null` is true) and `0` for numeric types.
@@ -85,12 +92,14 @@ The running example as four `edit_table_blocks` creates. Two timeless tables hol
 {"action": "create", "name": "Territory assumptions", "rows": [{"dimension": "Territory", "items": ["Southgate", "Eastmere"]}], "columns": [{"variable": "Listener growth"}], "values": {"columns": ["Listener growth"], "rows": [["Southgate", 0.02], ["Eastmere", 0.03]]}}
 ```
 
-Listening is dated: each territory's opening count is an input in the last Actuals month, 2026-08 here, and the Forecast rule grows it; as a count, its quarters, half-years, and years read the last month:
+Listening is dated: each territory's opening count is an input in the last Actuals month, 2026-08 here, and the growth rule on Actuals and Forecast grows it; as a count, its quarters, half-years, and years read the last month:
 
 ```
 {"action": "create", "name": "Listening", "columns": [{"time": "MONTH"}],
  "rows": [{"variable": "Weekly listeners", "breakdown": ["Territory"], "rollup": "LAST",
-   "child_defaults": [{"dimension": "Territory", "forecast": "`Weekly listeners`[-1] * (1 + `Listener growth`$[Territory = this.Territory])"}]}],
+   "child_defaults": [{"dimension": "Territory",
+     "actuals": "if(`Weekly listeners`[-1] = null, NULL, `Weekly listeners`[-1] * (1 + `Listener growth`$[Territory = this.Territory]))",
+     "forecast": "`Weekly listeners`[-1] * (1 + `Listener growth`$[Territory = this.Territory])"}]}],
  "values": {"columns": ["2026-08"], "rows": [["Weekly listeners[Southgate]", 100000], ["Weekly listeners[Eastmere]", 60000]]}}
 ```
 

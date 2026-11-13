@@ -95,6 +95,7 @@ function Block({ data }) {
 1. **Render and layout validation (`validate: true` or `validate_code_blocks`)**:
    - Inspect `readback` grids (`c1`…`cN` are readback-only labels), `plotted` series summaries, and responsive layout checks across phone and desktop viewports (`validate_code_blocks`).
    - Before the design pass, fix text-overlap or overflow warnings (using Grid `minColumnWidth`, wrapping, or intentional horizontal scroll) and rewrite any `"Design:"` warning.
+   - **Views behind a control:** Request `visual_review` with `click` set to a control's `data-guide-anchor` id, without `view`, to see the tab or section it opens; the saved block is unchanged. A click that runs returns an image with no design assessment. An id held by no control, by several, or by a hidden or disabled one returns `visualReview.clickFailure` and no image.
 2. **Aesthetic design pass (`visual_review`)**:
    - For interactive applications, request `visual_review` in `validate_code_blocks` with `view: "desktop-opening"` and a `brief` stating the intended hierarchy and user requirements.
    - Inspect the rendered image for visual hierarchy, alignment, direct editor placement on marks, and baseline comparison clarity.
