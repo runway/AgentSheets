@@ -269,6 +269,7 @@ if(`Start Date` <> null and startofmonth(`Start Date`) <= Date.Month and (`End D
 ```
 
 - **Compensation**: Estimate pay only as a role-level rate each employee row reads, reserving person-level pay for sourced or user-supplied facts and explaining estimates in your reply. Convert annual (`Annual Pay / 12`), monthly, or hourly rates (with disclosed hours), prorating partial months, adding taxes/benefits, and keeping contractors, unpaid founders (`0`), uncategorized departments, and currencies explicit.
+- **Planned hires already on the roster**: Before reporting payroll, compare planned hires with roster and payroll records; only a pair that shares a name, or both role and start month, is a possible duplicate: open the reply with it and each record's monthly pay, state totals after it, and keep both records until the person says which to keep.
 
 ### Cash and financial statements
 
