@@ -25,7 +25,7 @@ A workbook presents its visible sheets. A rebuild of the workbook covers the vis
 ## Survey, Source Map, and Navigation
 
 - **Stage claims by evidence**: Before reading the file, describe only your import method. After surveying the file, report its structure and scope. Claim numeric parity only for sections verified by reconciliation.
-- **Source map**: Record each sheet and cell range, its purpose, its periods, its attachment ID (`runway-file-…`), and its destination (rebuilt page/variables, ingested CSV source table, or existing connection/query).
+- **Source map**: Record each sheet and cell range, its purpose, its periods, its attachment ID (`runway-file-…`), and its destination (rebuilt page/variables, ingested CSV source table, or existing connection/query). List sheets in build order: a sheet comes after the sheets it reads.
 - **Page and table mapping**:
   - Each in-scope worksheet of assumptions, calculations, or reports becomes a page of the same name, and each labeled section across the full used range becomes a table block.
   - Collapse multiple sheets that repeat an identical layout per item (such as per product or region) into a single page over a shared dimension.
@@ -56,17 +56,50 @@ For a monthly `SUM(C7:N8)` at K11, where the rows select cost lines A and B:
 sum(`Cost`$[`Cost line` in {"A", "B"}, Date.Month in [-8]:[3]])
 ```
 
-## Reconciliation, Task Decomposition, and Version Updates
+## Building, Tying Out, and Resuming Sheet by Sheet
 
-- **Section-by-section reconciliation**: Verify every section in the source map (including later rows and columns, subtotals, formula boundaries, actuals, forecasts, and scenarios) against the source file. If neighboring formulas expose a clear formula bug in the source, report both the original source figure and the corrected calculation.
-- **Running as a multi-step background task**:
-  1. Complete the workbook survey and source map in the foreground conversation and put those settled findings in the task brief.
-  2. **Shared foundation step**: Create the `Date` axis, Last close, dimensions, mappings, scenarios, and saved source-map summary (no sheet tables).
-  3. **Area build steps (`verify: true`)**: One step per business area (or sequential per-section steps for oversized sheets) that builds the area's tables and reconciles them against the source. If an area needs numbers from another area not yet built, load the workbook's values as temporary inputs and note them.
-  4. **Cross-area tie-out step (`verify: true`)**: Replace temporary cross-area inputs with live variable references and verify cross-sheet links, statement identities, cash recurrence, and scenario behavior.
-- **Handoff summary**: State what was imported, what was rebuilt, provisional assumptions, corrected source defects, unmapped items, and any remaining discrepancies.
+The import's summary page in `Main` holds its plan and record; its saved text names the source file's `runway-file-…` ID.
 
-### Updating from a newer workbook version
+1. **Plan**: After the survey, save the source map on the summary page and show it in chat before building.
+2. **One sheet at a time**: Build sheets in source-map order. Creating tables, pages, and variables waits on one workspace-wide lock, so parallel sheet writes can time out.
+3. **Section-by-section reconciliation**: Verify every section of the sheet (including later rows and columns, subtotals, formula boundaries, actuals, forecasts, and scenarios) against the file. If neighboring formulas expose a clear formula bug in the source, report both the source figure and the corrected calculation.
+4. **Sheet tie-out**: As the sheet's last write, add all its rows to the `Workbook tie-out` table on the summary page in one table write.
+5. **Finished sheets**: A sheet with rows in `Workbook tie-out` is finished; one without is unfinished, even when its page holds tables. Sheets the source map excludes, including a sheet with no cells to check, are not built.
+6. **Handoff**: State what was imported and rebuilt, provisional assumptions, corrected source defects, and unmapped items. The final reply lists each sheet with its tie-out: cells checked, and each difference with its workbook value, cfo.ai value, and cause.
+
+### The `Workbook tie-out` table
+
+A timeless table with one row per checked cell, created by the first sheet that ties out. Its values recalculate with the model.
+
+| Row or column             | Holds                                                                      |
+| ------------------------- | -------------------------------------------------------------------------- |
+| `Workbook cell` dimension | One item per checked cell, named by sheet and cell, such as `P&L!N24`.     |
+| `Workbook value`          | The cell's value in the file, typed.                                       |
+| `cfo.ai value`            | A formula that reads the rebuilt variable at that cell's period and items. |
+| `Tie-out difference`      | `cfo.ai value` minus `Workbook value`.                                     |
+
+Check each rebuilt table's total row, or its last row, at the sheet's first and last periods (once on a sheet without periods). A version update retypes `Workbook value` from the new file; until it does, that sheet is unfinished for the update.
+
+### Resuming a stopped import
+
+An import stops when its turn ends early, a task step fails, or the person stops it. To resume it in any chat:
+
+1. Read the summary page's source map and `Workbook tie-out`.
+2. Rebuild nothing on finished sheets' pages.
+3. Continue the first unfinished sheet in source-map order, from the tables its page already holds. A stopped background task resumes with `edit_tasks` `retry`.
+
+### Running as a background task
+
+When the person chose a background build:
+
+1. Complete the survey and source map in this conversation. Put them, the tie-out table, and the finished-sheet rule in the task brief.
+2. **Foundation step (`verify: false`)**: Create the `Date` axis, Last close, dimensions, mappings, scenarios, and the summary page with the source map (no sheet tables).
+3. **Sheet steps (`verify: false`)**: One step per sheet, each with the step before it in `depends_on`, so sheets build in order; neighboring sheets share a step when a task cannot hold one per sheet. A sheet needing numbers from a sheet not yet built loads the workbook's values as temporary inputs and notes them.
+4. **Cross-sheet step (`verify: true`)**: Replace temporary inputs with live variable references, verify cross-sheet links, statement identities, cash recurrence, and scenario behavior, and report each sheet's tie-out.
+
+Only the last step takes a review: a review that sends an earlier step back over values alone would start the steps after it while the repair runs.
+
+## Updating from a newer workbook version
 
 A version update compares each section with the prior attachment in the source map. Added and removed sections, changed tables or formulas, and changed CSV source tables are reflected in the model. Edits in unchanged sections and rules the person deliberately chose over the file stay in place, including in changed sections.
 

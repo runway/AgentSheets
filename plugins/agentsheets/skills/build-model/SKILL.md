@@ -175,7 +175,8 @@ sum(Amount$[Account.Bucket = this.Bucket, Date.Month = this.Date.Month])
 
 ## Tables as views
 
-- **Time-series vs. record tables**: Time-series tables put variables on rows and `Date` on columns; record tables put a record key (`Employee ID`, `Deal`) on rows and variables/dimensions as field columns. Keep large record tables fast by displaying only requested columns and filtering the row dimension to relevant records.
+- **Time-series vs. record tables**: Time-series tables put variables on rows and `Date` on columns; record tables put a record key (`Employee ID`, `Deal`) on rows and variables/dimensions as field columns. Filter a large record table's rows to the relevant records.
+- **Record table fields**: Show the fields the person names. When they name none, show all of a source's fields up to 12. A wider source gets at most 12 that identify and act on each record (key, date, counterparty, amount, status, owner); every other field, audit and system fields included, goes in a second table keyed by the record.
 - **Display windows & formatting**: Set `window` explicitly on the table when a report specifies a start and end date, and apply table-specific `format_updates` at the broadest applicable scope (variable-level format acts as the model default).
 
 ## Pages and supporting work
