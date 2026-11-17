@@ -172,6 +172,9 @@ sum(Amount$[Account.Bucket = this.Bucket, Date.Month = this.Date.Month])
 ```
 
 - **Chained hops & scoped measures**: Lookup hops chain across mappings (`this.Project.SourceTeam.Team`). When reading a measure that is already isolated to one scope (such as `R&D Expense` stored by `Account × Month`), drop the outer `Department` coordinate deliberately: ``sum(`R&D Expense`$[Account in any, Date.Month = this.Date.Month])``.
+- **Classes mapped from a finer level**: When a table read or table edit receipt says a variable's formulas are saved by a group mapped from the same dimension as a class on the table:
+  1. Read any groups the issue left out through its `next`. Then, in the same turn, add a text block directly below that table (`edit_pages` `add_text` with `after_block`), or update the one already there. Name the class's source and each unsplit group.
+  2. Ask once how each listed group splits, and keep its amounts as saved until answered.
 
 ## Tables as views
 
