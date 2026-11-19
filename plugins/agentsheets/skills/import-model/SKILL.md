@@ -58,7 +58,7 @@ sum(`Cost`$[`Cost line` in {"A", "B"}, Date.Month in [-8]:[3]])
 
 ## Building, Tying Out, and Resuming Sheet by Sheet
 
-The import's summary page in `Main` holds its plan and record; its saved text names the source file's `runway-file-…` ID.
+A first import follows these steps. Its summary page in `Main` holds its plan and record; its saved text names the source file's `runway-file-…` ID.
 
 1. **Plan**: After the survey, save the source map on the summary page and show it in chat before building.
 2. **One sheet at a time**: Build sheets in source-map order. Creating tables, pages, and variables waits on one workspace-wide lock, so parallel sheet writes can time out.
@@ -78,7 +78,7 @@ A timeless table with one row per checked cell, created by the first sheet that 
 | `cfo.ai value`            | A formula that reads the rebuilt variable at that cell's period and items. |
 | `Tie-out difference`      | `cfo.ai value` minus `Workbook value`.                                     |
 
-Check each rebuilt table's total row, or its last row, at the sheet's first and last periods (once on a sheet without periods). A version update retypes `Workbook value` from the new file; until it does, that sheet is unfinished for the update.
+Check each rebuilt table's total row, or its last row, at the sheet's first and last periods (once on a sheet without periods). A version update retypes `Workbook value` from the new file.
 
 ### Resuming a stopped import
 
@@ -103,4 +103,7 @@ Only the last step takes a review: a review that sends an earlier step back over
 
 A version update compares each section with the prior attachment in the source map. Added and removed sections, changed tables or formulas, and changed CSV source tables are reflected in the model. Edits in unchanged sections and rules the person deliberately chose over the file stay in place, including in changed sections.
 
-Reconciliation and the update report distinguish preserved choices from unexplained differences. The saved summary retains those choices, and its source map names the new attachment.
+The saved summary keeps the rules the person stated, and its source map names the new attachment ID. Update each source-map entry whose recorded facts changed, and keep the other entries as they were.
+
+- **Checks**: In the update report, list each sheet's checked cells, chosen as for a tie-out, with the workbook value, cfo.ai value, and the cause of any difference: a preserved choice or an unexplained difference. The update adds no check table and no check prose to any page. New check rows go only into the summary page's existing `Workbook tie-out` table.
+- **Interrupted update**: Resume by comparing the saved model with the new workbook again; a section that already matches needs no write.
