@@ -7,15 +7,13 @@ description: Use when importing, migrating, or rebuilding an external spreadshee
 
 Rebuild an external spreadsheet, export, or document as native cfo.ai variables, dimensions, scenarios, formulas, and tables (`[[build-model]]`, `[[build-visualizations]]`, `[[connect-data-sources]]`).
 
-- **Logic over coordinates:** Translate cell formulas into named variables and dimensions using `[[build-model]]`.
-- **Default scope:** Rebuild every business-relevant visible section, period, scenario, statement, and view without modifying source files unless the user narrows scope.
-- **Over connected sources:** When tabs export a system already connected in cfo.ai, read from the live connection (`[[connect-data-sources]]`) and rebuild the workbook's logic and views over it. Keep export-versus-live comparisons in chat unless requested on a page.
+- **Default scope:** Translate cell formulas into named variables and dimensions (`[[build-model]]`) covering every business-relevant visible section, period, scenario, statement, and view without modifying source files unless narrowed.
+- **Over connected sources:** When tabs export a system already connected in cfo.ai, read from the live connection (`[[connect-data-sources]]`) and rebuild the workbook's logic over it. Keep export-versus-live comparisons in chat unless requested on a page.
 
 ## Workbooks Shared in Conversation
 
-- **Question first:** If asked a question about the workbook, answer from the file before rebuilding, and note in the reply whether a rebuild started or finished.
-- **Existing lines:** If lines already exist from a prior import or cfo.ai export, update those variables instead of duplicating them (`## Updating from a Newer Workbook Version`).
-- **Comparison tables:** Read rebuilt variables rather than typed workbook copies.
+- **Question first:** If asked a question about the workbook, answer from the file before rebuilding, and note whether a rebuild started or finished.
+- **Existing lines:** Update existing variables from a prior import or cfo.ai export instead of duplicating them (`## Updating from a Newer Workbook Version`). Comparison tables must read rebuilt variables rather than typed copies.
 - **Recorded values:** Raw exports whose only formulas are subtotals (bank exports, aging, timesheets) are source data (`[[connect-data-sources]]`), not models to rebuild.
 
 ## Which sheets a workbook presents
@@ -24,30 +22,23 @@ A workbook presents its visible sheets. A rebuild of the workbook covers the vis
 
 ## Survey, Source Map, and Structure
 
-| Stage                       | What you may claim                         |
-| --------------------------- | ------------------------------------------ |
-| Before reading              | Describe only your planned method.         |
-| After survey                | Report structure and scope.                |
-| After reconciling a section | Claim parity only for reconciled sections. |
-
-- **Source map:** Record each sheet, cell range, purpose, periods, attachment ID (`runway-file-...`), and destination (rebuilt page and variables, ingested CSV, or existing connection and query) in dependency order (each sheet after the sheets it reads).
+- **Claim boundaries:** Before reading, describe only your planned method; after survey, report structure and scope; claim parity only for reconciled sections.
+- **Source map:** Record each sheet, cell range, purpose, periods, attachment ID (`runway-file-...`), and destination (rebuilt page/variables, ingested CSV, or existing connection/query) in dependency order.
 - **Pages and tables:** Each in-scope assumption, calculation, and report sheet becomes a page of the same name, and each labeled section becomes a table block (except raw transaction tabs and repeated per-item tabs mapped below).
 
 ## Mapping Patterns to cfo.ai
 
-| Source pattern                                                    | Native cfo.ai representation                                                                                                                                                                                       |
-| ----------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **Transaction rows or leaf exports (`>200` fixed values)**        | Clean CSV at true grain (distinct quantities in separate columns; business date column name, not `Date`), loaded via `edit_integrations` (`ingest_csv`) and mapped via a saved query (`[[connect-data-sources]]`). |
-| **Tunable assumptions**                                           | Editable input variables with typed cells (preserve exact inputs, dated changes, and zeros).                                                                                                                       |
-| **Repeated row groups, tabs, or column bands**                    | One variable broken down by a shared dimension on one page, not per-item variables.                                                                                                                                |
-| **Account or category lookups**                                   | Dimension mappings (`[[build-model]]`), not hardcoded formula filters.                                                                                                                                             |
-| **Case selectors, duplicate case tabs, or `FY26 Budget` columns** | Separate scenarios sharing variables and `Date` (never an additive dimension); inspect existing scenarios first.                                                                                                   |
-| **Statement totals, subtotals, or copied outputs**                | Reconciliation targets reproduced by native formulas; never ingest as raw inputs (keep parent rows carrying direct postings).                                                                                      |
+- **Transaction rows or leaf exports (`>200` fixed values):** Clean CSV at true grain (distinct quantities in separate columns; business date column name, not `Date`), loaded via `edit_integrations` (`ingest_csv`) and mapped by a saved query (`[[connect-data-sources]]`).
+- **Tunable assumptions:** Editable input variables with typed cells (preserve exact inputs, dated changes, and zeros).
+- **Repeated row groups, tabs, or column bands:** One variable broken down by a shared dimension on one page, never per-item variables.
+- **Account or category lookups:** Dimension mappings (`[[build-model]]`), not hardcoded formula filters.
+- **Case selectors, duplicate case tabs, or `FY26 Budget` columns:** Separate scenarios sharing variables and `Date` (never an additive dimension); inspect existing scenarios first.
+- **Statement totals, subtotals, or copied outputs:** Reconciliation targets reproduced by native formulas; never ingest as raw inputs (keep parent rows carrying direct postings).
 
 ## Time Boundaries and Formulas
 
 - **Last close:** Reconcile against the source's close. You may move Last close to match (disclose the change), but never stretch `Actuals` into forecast periods to force parity. Keep post-close operational data distinct from projections, and do not spread annual values into months without an explicit rule.
-- **Formula translation:** Preserve operands, constants, date windows, and methods using named variables, dimensions, opening recurrence seeds, and `LAST` rollups (`[[build-model]]`). Never silently change forecasting methods; if the source holds values only, build editable native logic and disclose it.
+- **Formula translation:** Preserve operands, constants, date windows, and methods (`[[build-model]]`). Never silently change forecasting methods; if the source holds values only, build editable native logic and disclose it.
 - **Range aggregates:** Translate a range mapped to one variable into one aggregate over matching items and a relative or fixed date window (filter selected items; use native rollups or mappings for whole-dimension totals). Group bulk range cells by variable (for example, `SUM(C7:N8)` at current month `K11` for cost lines `A` and `B`):
 
 ```formula
@@ -56,13 +47,13 @@ sum(`Cost`$[`Cost line` in {"A", "B"}, Date.Month in [-8]:[3]])
 
 ## Build, Tie Out, and Resume Sheet by Sheet
 
-Keep the import's plan and record on a `Main` summary page naming the source `runway-file-...` ID:
+Keep the import plan and record on a `Main` summary page naming the source `runway-file-...` ID:
 
 1. **Plan:** Save the source map on the summary page and show it in chat before building.
-2. **Sequential sheets:** Build one sheet at a time in source-map order (schema writes share a workspace lock, so parallel sheet writes can time out).
-3. **Reconcile every section:** Check later rows and columns, subtotals, boundaries, actuals, forecasts, and scenarios. If neighboring formulas expose a workbook bug, report both source and corrected values.
-4. **Tie out:** As each sheet's last write, append all its checked cells to `Workbook tie-out` on the summary page in one write.
-5. **Completion rule:** A sheet with rows in `Workbook tie-out` is finished; one without is unfinished even if tables exist. Excluded sheets (or sheets with no cells to check) are skipped.
+2. **Sequential sheets:** Build one sheet at a time in source-map order (schema writes share a workspace lock, so parallel writes can time out).
+3. **Reconcile every section:** Check later rows/columns, subtotals, boundaries, actuals, forecasts, and scenarios. If neighboring formulas expose a workbook bug, report both source and corrected values.
+4. **Tie out:** As each sheet's last write, append all checked cells to `Workbook tie-out` on the summary page in one write.
+5. **Completion rule:** A sheet with rows in `Workbook tie-out` is finished; one without is unfinished even if tables exist. Excluded or check-free sheets are skipped.
 6. **Handoff:** Report built scope, assumptions, corrected workbook bugs, unmapped items, and per-sheet tie-out (cells checked and any difference with workbook value, cfo.ai value, and cause).
 
 ### `Workbook tie-out` Table
@@ -84,6 +75,6 @@ Timeless table created by the first finished sheet (recalculates live):
 
 ## Updating from a Newer Workbook Version
 
-1. **Compare and apply changes:** Compare each section against the prior attachment in the source map. Apply added or removed sections, changed tables or formulas, and changed CSV sources while preserving edits in unchanged sections and explicit user rules even inside changed sections.
-2. **Update the record:** Update changed source-map entries and the new attachment ID while keeping unchanged entries and user rules. Append new checks only to `Workbook tie-out` rather than adding check tables or check prose to any page.
+1. **Compare and apply:** Diff each section against the prior attachment in the source map. Apply added/removed sections, changed tables/formulas, and changed CSV sources while preserving edits in unchanged sections and explicit user rules even inside changed sections.
+2. **Update the record:** Update changed source-map entries and the new attachment ID while keeping unchanged entries and user rules. Append new checks only to `Workbook tie-out` (never add extra check tables or prose to pages).
 3. **Report and resume:** Report checked cells per sheet (workbook value, cfo.ai value, and whether any difference is a preserved choice or unexplained). Resume interrupted updates by re-comparing against the new workbook and skipping already-matching sections.

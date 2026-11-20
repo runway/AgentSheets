@@ -5,8 +5,6 @@ description: Use when checking cfo.ai formula grammar, reference syntax, operato
 
 # Formula syntax and function reference
 
-Complete parser grammar, reference syntax, operators, and callable function inventory for cfo.ai formulas. For modeling conventions, cell evaluation, record tables, dimension mappings, and financial statements, see `[[build-model]]`.
-
 <!-- formula-syntax:start -->
 <!-- prettier-ignore-start -->
 
@@ -166,14 +164,11 @@ item-filter        = "not"? "in" membership
 
 ### Expression composition
 
-The Grammar productions are the whole truth about nesting; these are the
-consequences that are easy to read past.
-
 - Function arguments are full expressions, so lookups, nested calls, and bare `and`/`or` are all legal inside `f( … )`.
 - **Bracket fallthrough**: Any bracket not matching a predicate parses as a date offset (`Revenue[Flag = (Active and Open)]` = lookup; `Revenue[Flag = Active and Open]` = offset). Parenthesize compound values.
 - **Formula address**: Variable + one condition (`Revenue[]`, `Revenue$[Date.Month in any]`); a second bracket group is a parse error. Preserve matching mode and range when editing a saved rule.
 - **Dimension items**: `$[Location = "East Coast"].Location` pins and reads back an item (prefer over bare strings in comparisons and filters; keep `$` so row dimensions do not leak). `$[Location = "East Coast"].Revenue` equals `Revenue$[Location = "East Coast"]`.
-- **Mapped dimensions**: `Bucket$[Account = "5001"]` reads the mapped bucket; `this.Bucket` or `Account.Bucket` follows mapping keys across dot hops without inheriting unrelated dimensions such as Month. `sum(Amount[Bucket = "COGS"])` groups source rows by bucket; authored dated variables roll up via their key (`sum(Amount$[Account.Bucket = this.Bucket, Date.Month = this.Date.Month])`).
+- **Mapped dimensions**: `Bucket$[Account = "5001"]` reads the mapped item; `this.Bucket` or `Account.Bucket` hops across mapped dimensions without inheriting unrelated dimensions. `sum(Amount[Bucket = "COGS"])` groups source rows; authored dated variables roll up via the source dimension (`sum(Amount$[Account.Bucket = this.Bucket, Date.Month = this.Date.Month])`).
 
 | Formula | Composes |
 | --- | --- |
@@ -191,16 +186,18 @@ Use the preferred name. Accepted aliases still parse in stored formulas.
 
 #### Aggregation
 
-- `sum(value: number, value2...: number) -> number`: Takes 1 to 10 arguments. Empty fan-out: 0.
-- `product(value: number, value2...: number) -> number`: Takes 1 to 10 arguments. Empty fan-out: 0.
-- `min(value: number | date, value2...: number) -> number | date | null`: Takes 1 to 10 arguments. Empty: null. Single date/datetime returns earliest; multiple args must be numbers.
-- `max(value: number | date, value2...: number) -> number | date | null`: Takes 1 to 10 arguments. Empty: null. Single date/datetime returns latest; multiple args must be numbers.
-- `average(value: number, value2...: number) -> number | null`: Takes 1 to 10 arguments. Empty: null. *(accepted: `avg`)*
-- `count(value: any, value2...: any) -> number`: Takes 1 to 10 arguments. Non-empty count (COUNTA). A bracketed filter keeps filtered dimensions and replaces the row item: `count(Deal[Region in {"East", "West"}])` counts Deal×Region pairs, `count(Deal$[Deal where count(Deal[Deal = Deal, Region in {"East", "West"}]) > 0])` counts distinct deals, and `if(count(...) > 0, 1, 0)` flags a deal.
+Variadic functions take 1 to 10 arguments (`first`, `last`: unbounded).
+
+- `sum(value: number, value2...: number) -> number`: Empty fan-out: 0.
+- `product(value: number, value2...: number) -> number`: Empty fan-out: 0.
+- `min(value: number | date, value2...: number) -> number | date | null`: Empty: null. Single date/datetime returns earliest; multiple args must be numbers.
+- `max(value: number | date, value2...: number) -> number | date | null`: Empty: null. Single date/datetime returns latest; multiple args must be numbers.
+- `average(value: number, value2...: number) -> number | null`: Empty: null. *(accepted: `avg`)*
+- `count(value: any, value2...: any) -> number`: Non-empty count (COUNTA). Bracketed filters keep filtered dimensions and replace the row item: `count(Deal[Region in {"East", "West"}])` counts Deal×Region pairs; `count(Deal$[Deal where count(Deal[Deal = Deal, Region in {"East", "West"}]) > 0])` counts distinct deals; `if(count(...) > 0, 1, 0)` flags a match.
 - `first(value: T, source2...: T) -> T | null`: First non-null in series order (multi-arg: FIRST per arg, then leftmost non-null; dates order within each arg only; errors are not null).
 - `last(value: T, source2...: T) -> T | null`: Last non-null in series order (multi-arg: LAST per arg, then rightmost non-null; dates order within each arg only; errors are not null).
-- `stdev(value: number, value2...: number) -> number | null`: Takes 1 to 10 arguments. Sample stdev (ddof=1) pooled across expressions; null if <2 values. *(accepted: `stddev`)*
-- `var(value: number, value2...: number) -> number | null`: Takes 1 to 10 arguments. Sample variance (ddof=1) pooled across expressions; null if <2 values. *(accepted: `variance`)*
+- `stdev(value: number, value2...: number) -> number | null`: Sample stdev (ddof=1) pooled across expressions; null if <2 values. *(accepted: `stddev`)*
+- `var(value: number, value2...: number) -> number | null`: Sample variance (ddof=1) pooled across expressions; null if <2 values. *(accepted: `variance`)*
 - `median(value: number) -> number | null`: Empty: null.
 
 #### Math
