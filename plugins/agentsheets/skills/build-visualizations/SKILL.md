@@ -1,77 +1,59 @@
 ---
 name: build-visualizations
-description: Build model-connected Canvas visualizations and interactive applications. Use when choosing a business representation, making timing or other choices directly manipulable, binding datasets, or reviewing the rendered result.
+description: "Use when building Canvas visuals or interactive apps: choosing chart types, direct manipulation, binding datasets, or visual review."
 ---
 
 # Build visualizations
 
-A Canvas block is an interactive React application or explanatory visual bound to live model datasets (`[[build-model]]` owns native tables). Match its scope to the user's question: a focused decision gets a focused simulator; a full model build closes with a system-wide simulator showing the primary outcome over time and the few levers that move it most.
+A Canvas block is an interactive React visual bound to live model datasets (`[[build-model]]` owns native tables). Scope it to the question: a focused decision gets a focused simulator; a full model build closes with a system-wide simulator showing the primary outcome over time and the few levers that move it most.
 
-## Core Design Principles
+## Design Principles
 
-- **Requested page content**: Keep application page prose to 1–2 lines on purpose and use. Reports contain the requested figures and narrative, including explicitly requested sources, qualifications, or methods. A report skill's page layout is part of what the person asked for.
-- **Authoring notes**: Keep unrequested preparation notes in Ari chat: source coverage, reconciliation status, estimate disclaimers, preview scope, change logs, footnote markers, source lines, and method notes. Delegated writers put these notes in the step report for Ari's chat handoff.
-- **Figure labels**: An unrequested qualifier describing where or how Ari produced a number (source system, reconstruction, or basis) is an authoring note. Labels identifying saved, preview, or estimated values, or naming a specific unresolved item beside its figure, stay on the page.
-- **Removing notes**: When removing unrequested authoring notes, state their details in your chat reply. Remove that note kind across the page and subsequent edits. Requested report content follows the person's stated removal scope; delegated writers' briefs must name removed note kinds because writers know only their brief.
-- **Figure definitions**: A figure named for a metric the person defined must use their definition whenever written. If the data cannot support it, name the figure for what it measures or leave it pending, and explain why in chat.
-- **Direct manipulation at the mark**:
-  - Combine the primary action and its financial consequence in the opening view. Make the business object its own control: drag an event along the time axis to shift a hire or contract start; drag a segment boundary to change an allocation; drag a trajectory endpoint to adjust a growth rate.
-  - Selecting an object opens exact numeric/keyboard entry right beside that mark using its exact currency, unit, and precision. Avoid separate form panels or redundant summary strips that merely repeat the figure.
-  - At rest, show one path labeled as both saved and preview; once a user adjusts a lever, keep the saved baseline path visible alongside the diverging preview path and label the difference where it matters most (such as cash low points or threshold crossings).
-- **Preview vs. saved model**: Local JavaScript computes responsive preview paths from the model's relationships while historical periods stay fixed. User gestures change local preview state only (`Reset` returns to the saved baseline); saving changes to the financial model happens through modeling tools under user intent.
-- **Typography, color, and scale**:
-  - Use shared theme tokens, typography roles, tabular numerals, and injected `formatValue` / `formatCompactValue` helpers rather than custom font scales or formatters.
-  - Use position and length for quantities, hue for identity (one hue per meaning), and lightness for magnitude. Pair every color cue with a position, shape, line-style, or label cue.
-  - Color favorable/unfavorable deltas by business meaning rather than sign, and render zero differences as `"No change"` in neutral style. Keep axis ticks at round business numbers and lock axis scales during drag gestures.
+- **Page copy and authoring notes:** Keep application page prose to 1–2 lines on purpose; reports include only requested figures, narrative, sources, qualifications, or methods (report-skill layouts count as requested). Keep unrequested authoring notes (coverage, tie-out status, estimate disclaimers, preview scope, change logs, footnotes, source/method notes, provenance qualifiers) in chat or step reports — only labels marking saved, preview, or estimated values, or naming an unresolved item, stay on the page. When asked to remove unrequested notes, move details to chat, strip that kind across the page and future edits, and list removed kinds in delegated briefs. Requested report content follows the user's stated removal scope.
+- **User-defined metrics:** Use the user's definition; if data cannot support it, rename or defer and explain in chat.
+- **Direct manipulation at the mark:**
+  - Put primary controls and their financial consequence in the opening view, and make business objects their own controls (drag events along time to shift dates, drag segment boundaries for allocations, drag endpoints for growth).
+  - Selecting a mark opens inline numeric or keyboard entry with exact currency, unit, and precision. Avoid separate form panels or redundant KPI strips.
+  - At rest, show one path labeled saved plus preview; once adjusted, keep the saved baseline visible beside the preview path and label key differences (cash troughs, threshold crossings).
+- **Preview vs. saved model:** Local JS computes live preview paths while historical periods stay fixed; gestures change local preview state only (`Reset` restores baseline). Model writes happen only via modeling tools under user intent.
+- **Theme and formatting:** Use injected theme tokens, typography roles, tabular numerals, and `formatValue` or `formatCompactValue`.
+- **Color and scale:** Encode quantity by position or length, identity by hue (1 hue per meaning), and magnitude by lightness, pairing every color cue with position, shape, dash, or label. Color deltas by business favorability (not sign), show zero as `"No change"`, use round axis ticks, and lock axis scales while dragging.
 
-## Designing a Full-Business Simulator ("A Business on One Page")
+## Full-Business Simulator Layout
 
-When building a primary business application, organize the opening view in one clear reading order:
+Organize the opening view in one reading order:
 
-1. **Live headline**: One sentence stating the business question and current outcome in the company's vocabulary (optionally with inline draggable inputs).
-2. **Center backbone figure**: The primary outcome the user answers for over time, showing the saved baseline path, key milestones, and any critical threshold (such as minimum cash reserve) labeled at the crossing point.
-3. **Interactive levers**: Placed beside or beneath the backbone on a shared time axis or scale, covering the highest-impact revenue, cost, and funding drivers. Next to each lever, plot a small sensitivity curve across its plausible range showing the current value and where the outcome crosses any threshold.
-4. **Supporting detail**: Quieter context and methodology below the fold.
+1. **Live headline:** One sentence stating the business question and outcome in company terms (with optional inline draggable inputs).
+2. **Backbone figure:** Primary outcome over time with saved baseline, milestones, and labeled threshold crossings (such as minimum cash).
+3. **Interactive levers:** Beside or beneath on a shared axis, covering top revenue, cost, and funding levers with a small sensitivity curve showing current value and threshold crossing.
+4. **Supporting detail:** Quieter context below the fold.
 
-## Component Library, HTML Controls, and Host Events
+## Components, Controls, and Host Events
 
-Start by calling `inspect_canvas_library` (`read`) for the target visual components or templates. Its `runtime_contract` and the `source` parameter of `edit_canvas_blocks` define available props, theme tokens, state, and events:
+Call `inspect_canvas_library` (`read`) for target components and templates first (`runtime_contract` and `edit_canvas_blocks` `source` define props, tokens, state, and events):
 
-| Capability                               | Rules and contracts                                                                                                                                                                                                                                                                                                                                  |
-| ---------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Library components**                   | Use `Timeline` / `DecisionTimeline` for schedules, `EditableChart` for draggable points/bars, `BusinessDriver` for amounts, `EditableAllocation` for fixed-total splits, `InteractiveFunnel` for conversions, and `Chart` for comparisons. Combine with custom HTML/SVG when a single geometry must unify controls and outcomes.                     |
-| **Templates (`kind: "template"`)**       | When templates are enabled, call `inspect_canvas_library` `list` (`kind: "template"`) then `read` the match and bind it to real model datasets. When disabled, build a standard chart or KPI.                                                                                                                                                        |
-| **Top-level helper components**          | Declare helper React components at the top level outside `Block` and pass data via props (`edit_canvas_blocks` `create` refuses inner component definitions except on `source_template`).                                                                                                                                                            |
-| **Standard HTML controls**               | Use native `<button>` (`data-variant="accent" \| "ghost" \| "destructive"`), `<input>`, `<select>`, `<fieldset>` radios (`data-variant="segmented"` for segmented tracks), `<input type="checkbox" role="switch">`, `<input type="range">` + `<output>`, `<textarea>`, and `<input type="file">` (read locally via `File.text()` / `arrayBuffer()`). |
-| **In-app navigation (`navigate`)**       | Emit `navigate` from a click handler (never `<a href>`) using a tool-returned `url`, `runway:` reference, or workspace page path (`edit_canvas_blocks` `source`).                                                                                                                                                                                    |
-| **Downloading saved files (`download`)** | Emit `download` with a file's `runway-file-` reference from a button's onClick; only the file's owner can download it.                                                                                                                                                                                                                               |
-| **Walkthrough anchors**                  | Add stable `data-guide-anchor="<id>"` attributes to interactive controls and outcomes. On toggles that reveal hidden sections/tabs, add `data-guide-reveals="id1 id2"` and keep `aria-expanded` accurate.                                                                                                                                            |
-| **Comment anchors**                      | Give meaningful sections, cards, and repeated items a unique `data-comment-id`. Preserve each ID while editing the same logical element. Derive repeated-item IDs from stable record identities, not array positions. Never reuse an ID for unrelated content.                                                                                       |
-| **Starting Ari chats (`startAriChat`)**  | Add `data-ari-action` to buttons that trigger Ari work and call `emit({ type: 'startAriChat', message }, event)` synchronously in `onClick` (`edit_canvas_blocks` `source`).                                                                                                                                                                         |
+| Capability                            | Rules                                                                                                                                                                                                                                                                                                                                                                              |
+| ------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Library components**                | `Timeline` or `DecisionTimeline` (schedules), `EditableChart` (draggable points or bars), `BusinessDriver` (amounts), `EditableAllocation` (fixed-total splits), `InteractiveFunnel` (conversions), `Chart` (comparisons); combine with HTML or SVG when one geometry must unify controls and outcomes.                                                                            |
+| **Templates (`kind: "template"`)**    | When enabled, call `inspect_canvas_library` `list` (`kind: "template"`), read a match, and bind real datasets; otherwise build a standard chart or KPI.                                                                                                                                                                                                                            |
+| **Top-level helpers**                 | Define helper components outside `Block` and pass props (`create` refuses inner definitions except on `source_template`).                                                                                                                                                                                                                                                          |
+| **HTML controls**                     | Native `<button>` (`data-variant="accent" \| "ghost" \| "destructive"`), `<input>`, `<select>`, `<fieldset>` radios (`data-variant="segmented"`), `<input type="checkbox" role="switch">`, `<input type="range">` with `<output>`, `<textarea>`, and `<input type="file">` (local `File.text()` or `arrayBuffer()`).                                                               |
+| **Navigation and downloads**          | Emit `navigate` on click (never `<a href>`) with a tool URL, `runway:` ref, or page path. Emit `download` with a `runway-file-` ref on click (file owner only).                                                                                                                                                                                                                    |
+| **Guide and comment anchors**         | Add stable `data-guide-anchor="<id>"` on interactive controls and outcomes (`data-guide-reveals="id1 id2"` with `aria-expanded` on reveals). Add unique, stable `data-comment-id` on meaningful sections, cards, or items keyed by record ID (never array index; preserve across edits; never reuse for unrelated content).                                                        |
+| **Ari chat buttons (`startAriChat`)** | Add `data-ari-action` and call `emit({ type: 'startAriChat', message }, event)` synchronously in `onClick`. Because `message` appears verbatim as the user's prompt, write a concise business request with current inputs; for repeatable workflows, name the saved skill or guide (`"Save my Operations budget with the budget-save skill"`) without pasting procedures or rules. |
 
-## Canvas Chat Button Messages
+## Dataset and Chart Binding
 
-- **Visible requests:** Every `startAriChat` message appears verbatim as the person's own words in the action's chat transcript; it has no hidden instruction channel. The message is the short business request plus relevant current inputs within the message's size limits. A request may describe the desired outcome in a few sentences.
+Declare only datasets the block actively uses (every declared `data.<name>` evaluates before render):
 
-- **Repeatable procedures:** When the work has a repeatable procedure, the message also names the saved skill or guide that holds it: "Save my Operations budget with the budget-save skill".
-
-- **Saved instructions:** For a repeatable procedure, tool choices, execution steps, and approval rules live only in the saved skill or guide. Ari can create it before wiring the button. The visible request names that workflow without repeating its instructions.
-
-## Dataset and Chart Binding Contract
-
-Each declared dataset (`data.<name>`) evaluates before `Block` renders, so declare only datasets the active visual uses:
-
-- **Time-series vs. record-list orientation**:
-  - **Time-series charts**: Put variables (and breakdowns) in `layout.rows` and `Date` in `layout.columns`. `dataset.rows` holds one entry per time period (`xKey: "date"`), and `dataset.series` holds the value series (`key`, `label`, `variable`, `segments`). If `dataset_evidence` reports `period_count: 0` with dates in `series_names`, swap rows and columns.
-  - **Record lists**: Put fields in `layout.rows` (using `useAs: "VARIABLE"` for mapped dimensions) and the record identity dimension matching the source grain in `layout.columns` with `NO_GRANULARITY`, validating mapped fields against source records so coarser keys do not collapse distinct item values. Each `dataset.rows` item is one record (`date` holds the record label, `row[entry.key]` holds each field value).
-- **Dataset audience**: A filter in the code changes only what the block draws. Each dataset a reader can access reaches that reader and the page's Excel download whole, including rows the code filters out. To show some items of a dimension, list them in the dataset's `include`.
-- **Avoid double-counting**: In `dataset.series`, empty `segments` represent the unsegmented parent variable and populated `segments` represent breakdown items. Never stack a parent total together with its own children.
+- **Time-series:** Variables and breakdowns in `layout.rows`, `Date` in `layout.columns`. `dataset.rows` holds periods (`xKey: "date"`); `dataset.series` holds `{ key, label, variable, segments }`. If `dataset_evidence` shows `period_count: 0` with dates in `series_names`, swap rows and columns.
+- **Record lists:** Fields in `layout.rows` (`useAs: "VARIABLE"` for mapped dimensions), record-ID dimension at source grain in `layout.columns` with `NO_GRANULARITY` (verify coarser keys do not collapse distinct rows). Each `dataset.rows` entry is one record (`date` is label, `row[entry.key]` is value).
+- **Audience and double-counting:** Restrict sensitive rows via dataset `include` rather than code filters (code filters hide display only). Never stack unsegmented parent series (`segments: []`) with their segmented children.
 
 ```jsx
 function Block({ data }) {
   const dataset = data.revenue || { rows: [], series: [] };
   if (dataset.error) return <Text variant="soft">{dataset.error}</Text>;
-
   return (
     <Chart
       options={{
@@ -88,20 +70,14 @@ function Block({ data }) {
 }
 ```
 
-- **Chart types**: Line, bar, and area charts share the `xKey: "date"` row layout; pie/donut charts slice a single row; waterfalls take signed deltas and explicit `totals` flags. Share a line plot only across comparable units and scales.
+- **Chart types:** Line, bar, and area use `xKey: "date"`; pie and donut slice one row; waterfall takes signed deltas and `totals`. Share axes only across comparable units and scales.
 
-## Validation, Aesthetic Design Pass, and Updates
+## Validation, Aesthetic Review, and Updates
 
-1. **Render and layout validation (`validate: true` or `validate_code_blocks`)**:
-   - Inspect `readback` grids (`c1`…`cN` are readback-only labels), `plotted` series summaries, and responsive layout checks across phone and desktop viewports (`validate_code_blocks`).
-   - Before the design pass, fix text-overlap or overflow warnings (using Grid `minColumnWidth`, wrapping, or intentional horizontal scroll) and rewrite any `"Design:"` warning.
-   - **Views behind a control:** Request `visual_review` with `click` set to a control's `data-guide-anchor` id, without `view`, to see the tab or section it opens; the saved block is unchanged. A click that runs returns an image with no design assessment. An id held by no control, by several, or by a hidden or disabled one returns `visualReview.clickFailure` and no image.
-2. **Aesthetic design pass (`visual_review`)**:
-   - For interactive applications, request `visual_review` in `validate_code_blocks` with `view: "desktop-opening"` and a `brief` stating the intended hierarchy and user requirements.
-   - Inspect the rendered image for visual hierarchy, alignment, direct editor placement on marks, and baseline comparison clarity.
-   - If either assessment is unavailable (`visualReview.assessmentError` or no `visualReview.assessment`), stop the design pass and disclose the unavailable assessment in chat. Do not treat it as passed.
-   - If `visualReview.assessment.revision` is null, finish the design pass. Optional `visualReview.assessment.refinement` does not trigger further edits or reviews.
-   - For a non-null `visualReview.assessment.revision`, apply one repair pass while keeping all levers manipulable. After a data-only change, repair only defects that change caused. Run `validate_code_blocks` with `visual_review` on the saved repair for exactly one confirming review, using the same target, view, and brief.
-   - After that confirmation, stop the design pass regardless of its result. Do not make another repair or request another review. Disclose any remaining blocking defect or unavailable validation in chat; stopping does not mean it passed.
-3. **Updating existing blocks (`edit_canvas_blocks` `update`)**:
-   - Read the saved block with `inspect_canvas_blocks` first. For data changes, patch source bindings with `source_patches` and update dataset declarations with `datasets`, keeping the layout and visuals. Send a full `source` with `based_on` (`source_hash`) when the person asks for a redesign.
+1. **Render validation (`validate: true` or `validate_code_blocks`):** Check `readback` (`c1` to `cN` are readback-only), `plotted` min and max values, and 360 to 1400 px warnings. Fix overlaps, overflows (Grid `minColumnWidth`, wrapping, or intentional horizontal scroll), and `"Design:"` warnings before visual review.
+   - **Hidden tabs or views:** Pass `visual_review` with `click` set to the tab's `data-guide-anchor` ID, and check `visualReview.clickFailure` if the click fails.
+2. **Bounded design pass (`visual_review`):** For interactive apps, run `validate_code_blocks` with `view: "desktop-opening"` and a `brief` stating intended hierarchy and user constraints. Inspect the rendered image for visual hierarchy, alignment, direct editor placement on marks, and baseline comparison clarity:
+   - If the assessment is missing or errored (`assessmentError` or no `assessment`), stop and disclose it in chat; never treat it as passed.
+   - If `assessment.revision` is null, stop (`assessment.refinement` triggers no extra edits).
+   - If `assessment.revision` is non-null, apply **one** repair pass keeping all levers manipulable (after data-only edits, fix only defects caused by that change), then run **one** confirming `visual_review` with the same target, view, and brief. Stop after that confirmation regardless of outcome and disclose any remaining blocking defect or unavailable check in chat.
+3. **Updating blocks (`edit_canvas_blocks` `update`):** Read via `inspect_canvas_blocks` first. Use `source_patches` with `datasets` for data updates, and full `source` only for redesigns.
