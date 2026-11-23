@@ -1,68 +1,60 @@
 ---
 name: build-model
-description: "Use when building, editing, or troubleshooting cfo.ai models: variables, formulas, dimensions, mappings, rollups, tables, comparisons, scenarios, headcount, pipeline, statements, cash, or BvA."
+description: "Use when building, editing, or troubleshooting cfo.ai models: variables, formulas, dimensions, mappings, rollups, tables, scenarios, statements, cash, or BvA."
 ---
 
 # Build the model
 
-A workspace has one shared model; tables are views over it. Variable names, formulas, and values belong to the shared model; row order, formatting, and breakdowns belong to each table block.
+- **Reusing vs. creating:** Pass `new: true` when a report reuses a name for a distinct concept. Plain names reuse an existing variable without overwriting saved settings; `#hex` refs overwrite shared defaults.
+- **Deleting shared objects:** Inspect dependents first and offer **Cancel** and **Delete completely**; when Ari can start a new chat, also offer **Keep with Ari** (moving preserved objects to a new page first), else ask for a destination page. System `Date` cannot be deleted.
+- **Parallel calls:** Same-turn calls run concurrently—sequence dependent writes across steps or bundle table layout and formulas in one `edit_table_blocks` (`create`).
 
-- **Reusing vs. creating variables:** Pass `new: true` when a report reuses an existing name for a distinct business concept. Plain names reuse an existing variable without overwriting saved settings, while `#hex` refs overwrite shared defaults.
-- **Deleting shared objects:** Inspect dependency impact first and offer **Cancel** and **Delete completely**. When Ari can start a new chat, also offer **Keep with Ari** (moving the preserved object to a new page first); otherwise ask for a destination page. System `Date` cannot be deleted.
-- **Parallel calls:** Calls in one turn run concurrently. Sequence dependent writes across steps, or bundle table layout and formulas in one `edit_table_blocks` (`create`) call.
+## How the Model Works
 
-## How the model works
+Running example: monthly listening service with tiers (`Lark`, `Chorus`) and territories (`Southgate`, `Eastmere`).
 
-Running example: a monthly listening service with tiers (`Lark`, `Chorus`) and territories (`Southgate`, `Eastmere`).
+### Cells, Rules, and Ranges
 
-### Cells, rules, and ranges
-
-- **Cell:** One variable at one item of each dimension (plus one period when dated). `Paying listeners` at `Chorus × Eastmere × March 2027` is dated; `Tier fee` at `Chorus` is timeless.
-- **Inputs vs. formulas:** Put editable assumptions in literal input cells and use formulas for calculated series rather than grids of repeated literals. Single-cell overrides pin one coordinate; clearing them restores the default formula and updates rollups.
-- **`Actuals`, `Forecast`, and `Last close`:** A formula's condition sets its `Date` grain (`Month`, `Day`, etc.). `Actuals` and `Forecast` have separate rule slots split at `Last close`, so write both when a rule spans the horizon. Put known post-close events in `Forecast` and disclosed estimates for closed periods in `Actuals` without moving `Last close`.
-- **Opening seeds and `[-1]` recurrences:** Enter an assumption's opening value in the last `Actuals` month and write its carry-forward rule on both `Actuals` and `Forecast`. The typed value wins in its month, and advancing `Last close` preserves the rule (on `Forecast` only, newly closed months read `0` and later months continue from `0`):
+- **Inputs vs. formulas:** Put editable assumptions in input cells and formulas in calculated series (never grids of repeated literals). Single-cell overrides pin one cell; clearing restores the default formula and rollups.
+- **`Actuals`, `Forecast`, `Last close`:** A formula's condition sets its `Date` grain (`Month`, `Day`, etc.). Write both `Actuals` and `Forecast` when a rule spans the horizon; put post-close events in `Forecast` and disclosed closed-period estimates in `Actuals` without moving `Last close`.
+- **Opening seeds and `[-1]` recurrences:** Seed the opening value in the last `Actuals` month and write the carry-forward rule on both `Actuals` and `Forecast` (typed value wins in its month; advancing `Last close` preserves the rule—on `Forecast` only, newly closed months read `0`):
 
 ```formula
 `Weekly listeners`[-1] * (1 + `Listener growth`$[Territory = this.Territory])
 ```
 
-- **Pre-seed months:** In `Actuals`, the formula also runs before the seed, and the calendar's first month reads an empty `[-1]` (so a running balance adds prior flows). Return `NULL` when `[-1]` is null to keep earlier months blank (same pattern for opening cash plus `Net Cash Flow`):
+- **Pre-seed months & imported recurrences:** In `Actuals`, the formula also runs before the seed (calendar month 1 reads an empty `[-1]`). Return `NULL` when `[-1]` is null to keep earlier months blank (same for opening cash + `Net Cash Flow`):
 
 ```formula
 if(`Weekly listeners`[-1] = null, NULL, `Weekly listeners`[-1] * (1 + `Listener growth`$[Territory = this.Territory]))
 ```
 
-- **First `Forecast` month and imported recurrences:** In the first `Forecast` month, `[-1]` reads the last `Actuals` input, imported value, or `Actuals` rule (`0` if absent). For imported variables, keep recurrences on `Forecast` only, because an `Actuals` rule replaces the source read in all `Actuals` months.
+In the first `Forecast` month, `[-1]` reads the last `Actuals` input, imported value, or `Actuals` rule (`0` if absent). Keep imported-variable recurrences on `Forecast` only (an `Actuals` rule replaces source reads across `Actuals`).
 
 <!-- Keep compact 3-column table unpadded to save skill tokens. -->
 <!-- prettier-ignore -->
-| Empty or null case | Evaluates to | Formula pattern |
+| Empty/null case | Value | Pattern |
 | --- | --- | --- |
-| Unset date or text cell | `null` (`End Date = null` is true) | `a = null` for missing checks |
-| Unset numeric cell | `0` | `iferror(x / y, NULL)` for ratios |
-| Blank imported raw column | `null` (`last` is `null`; `count` skips blanks) | `(a = null and b = null) or a = b` for nullable equality |
-| `SUM` variable over all-blank rows | `0` (`count` counts the `0`) | Guard zero denominators with `iferror` |
+| Unset date/text | `null` (`End Date = null` is true) | `a = null` |
+| Unset numeric | `0` | `iferror(x / y, NULL)` |
+| Blank raw column | `null` (`last` = `null`; `count` skips) | `(a = null and b = null) or a = b` |
+| `SUM` over all-blank rows | `0` (`count` counts `0`) | Guard zero denominators with `iferror` |
 
-### Reads, lookups, and breakdowns
+### Reads, Lookups, and Breakdowns
 
-- **Relative vs. absolute (`$`):** Plain names read at the current cell's coordinates. When an input has fewer dimensions than the cell (such as `Weekly listeners` by `Territory × Month`, with no tier), a relative read at `Chorus × Eastmere × March` returns `0`; pin only the input's coordinates with `$`:
+- **Relative vs. absolute (`$`):** Plain names read at current cell coordinates. When an input has fewer dimensions (e.g. `Weekly listeners` by `Territory × Month`, no tier), a relative read at `Chorus × Eastmere × March` returns `0`; pin only the input's coordinates with `$`:
   - Dated 1D: `` `Weekly listeners`$[Territory = this.Territory, Date.Month = this.Date.Month] ``
   - Timeless 1D: `` `Tier fee`$[`Listening tier` = this.`Listening tier`] ``
-  - **Parent vs. child lines:** A row's formula also runs on breakdown lines with no rule of their own. A coarser `$` read repeats on each line (for example, `Weekly listeners` by `Territory` repeats on `Lark` and `Chorus` and sums to 2× on a `SUM` parent).
-- **Bracket overrides (`[...]`):** Brackets override named coordinates and inherit the rest (`` `Listening revenue`[Territory = "Eastmere"] ``, ``sum(`Listening revenue`[Territory in any])``). Predicate values accept expressions such as ``Date.Month = startofmonth(`Last Snapshot Month`$)``.
-- **`where` and dimension filters:** Outside `where`, bare `Dim` equals `this.Dim`; inside `where`, bare `Dim` is the candidate record and `this.Dim` is the current cell. Filtering a second dimension keeps the row's drilled coordinate (``sum(Amount[`Account Type` = "Income"])`` by `Account`); filtering the row's own dimension (`sum(Amount[Account in {"A", "B"}])`) replaces it and repeats the total on every row.
-- **Breakdowns and `child_defaults`:** "If X, then use Y" is a standing rule: use `child_defaults` at the target dimension level so future items inherit it. Writing `child_defaults` on the leaf generates `level_default_sync` sums up each parent level.
-- **Percentage breakdowns (`PERCENTAGE`):** Never summed across children and never fall back to `0` on leaves. If all leaf inputs exist on the parent (`Profit / Revenue`), the parent evaluates on parent totals; if leaves hold typed rates, mixed rules, or `this.Dim` terms, write an explicit weighted formula or dateless row `formula`.
-- **Grouped column headers:** Set `summary: "NONE"` on a child column to run the row's own formula on its parent header.
+  - **Parent vs. child lines:** Row formulas also run on breakdown lines with no rule of their own; a coarser `$` read repeats on each child, so a `SUM` parent adds one copy per child.
+- **Brackets and `where`:** Brackets override named coordinates and inherit the rest (`` `Listening revenue`[Territory = "Eastmere"] ``, ``sum(`Listening revenue`[Territory in any])``; predicate values accept expressions like ``Date.Month = startofmonth(`Last Snapshot Month`$)``). Outside `where`, bare `Dim` = `this.Dim`; inside `where`, bare `Dim` = candidate record and `this.Dim` = current cell. Filtering a second dimension keeps the row's drilled coordinate; filtering the row's own dimension (`sum(Amount[Account in {"A", "B"}])`) replaces it and repeats the total on every row.
+- **`child_defaults` & `PERCENTAGE`:** Use `child_defaults` at the target dimension level so future items inherit standing rules (leaf `child_defaults` generates `level_default_sync` sums up each parent). `PERCENTAGE` breakdowns never sum children or fall back to `0` on leaves: if all leaf inputs exist on the parent (`Profit / Revenue`), the parent evaluates on parent totals; if leaves hold typed rates, mixed rules, or `this.Dim`, write an explicit weighted formula or dateless row `formula`. Set `summary: "NONE"` on a child column to run the row's formula on its grouped column header.
 
-### Time, rollups, and offsets
+### Time, Rollups, and Offsets
 
-- **System `Date` and fiscal years:** System `Date` drives the table calendar so forecast periods exist before data lands; source date columns do not. Match fiscal-year labels (`FY26`) to existing month labels.
-- **Time rollups (`rollup`):** Dated rules run at base grain (usually `Month`) and roll up to coarser columns (`Quarter`, `Half`, `Year`). Use `SUM` for flows, `LAST` for balances, counts, and constant prices, rates, or shares (change existing variables with `set_time_rollup`), and `AVERAGE` for period means.
-- **Ratios across grains:** Write ratios (``iferror(`Listening revenue` / `Paying listeners`, NULL)``) as a dateless row `formula` so every grain evaluates directly instead of rolling up monthly ratios.
-- **Offsets and proration:** Use `dateadd` or relative windows (`[-3]:[-1]`) for period comparisons, and prorate across `[Subscription in any, Date.Month in any]` using `datedif(start, end, "D") + 1` over `daysin(Date.Month, "month")`.
+- **System `Date` & rollups:** System `Date` drives the table calendar so forecast periods exist before data lands; match fiscal-year labels (`FY26`) to existing month labels. Dated rules run at base grain (usually `Month`) and roll up (`SUM` flows, `LAST` balances/counts/rates via `rollup` or `set_time_rollup`, `AVERAGE` period means). Write ratios (``iferror(`Listening revenue` / `Paying listeners`, NULL)``) as a dateless row `formula` so every grain evaluates directly.
+- **Offsets & proration:** Use `dateadd` or relative windows (`[-3]:[-1]`) for period comparisons; prorate across `[Subscription in any, Date.Month in any]` with `datedif(start, end, "D") + 1` over `daysin(Date.Month, "month")`.
 
-## Worked build
+## Worked Build
 
 Two timeless input tables:
 
@@ -82,7 +74,7 @@ Dated count table (seed in last Actuals month `2026-08`; growth rule on both ran
  "values": {"columns": ["2026-08"], "rows": [["Weekly listeners[Southgate]", 100000], ["Weekly listeners[Eastmere]", 60000]]}}
 ```
 
-Downstream breakdown (pins coarser inputs with `$`; parent sums auto-generate; dateless ratio stays accurate at every level and grain):
+Downstream breakdown (pins coarser inputs with `$`; parent sums auto-generate; dateless ratio works at every level/grain):
 
 ```
 {"action": "create", "name": "Paid listening", "columns": [{"time": "MONTH"}], "rows": [
@@ -97,116 +89,77 @@ Downstream breakdown (pins coarser inputs with `$`; parent sums auto-generate; d
    "formula": "iferror(`Listening revenue` / `Paying listeners`, NULL)"}]}
 ```
 
-Verify: first Forecast month grows from seed (not 0); `Chorus × Eastmere` in Sep = `61,800 × 0.01 × 50 = 30,900`; `Chorus` equals its two territories.
+Verify: first Forecast month grows from seed (not 0); `Chorus × Eastmere` Sep = `61,800 × 0.01 × 50 = 30,900`; `Chorus` = sum of both territories.
 
-## Rule reach and precedence
+## Rule Reach and Precedence
 
-- **Relative (`[...]`) vs. exact (`$[...]`) conditions:** Relative claims the named depth and deeper (`[Stage in any]` reaches stage, owner, and deal); exact claims only that depth. A parent sum fanning into child cells with no finer rule causes `#CIRC!`.
+- **Relative (`[...]`) vs. exact (`$[...]`)**: Relative claims named depth and deeper (`[Stage in any]` reaches stage, owner, deal); exact claims only that depth. A parent sum fanning into child cells without a finer rule causes `#CIRC!`.
+- **Precedence (highest -> lowest):** (1) Exact `$[...]` > Relative `[...]`; (2) More dimensions > fewer > `[]`; (3) Pinned `= "Won"` > Set `in {...}` > `in any`/`where`; (4) Newest saved rule > older > source/zero.
+- **Row-to-condition & debugging:** `child_defaults` on pinned row (`Scoping`) saves `[Stage = "Scoping", Owner in any]`; on open axis (`Total[Stage][Owner]`) saves `[Stage in any, Owner in any, Deal in any, Date.Month in any]`. Debug via `inspect_table_blocks` (`formulas`, `inherited_from`, `formula_origins`, `include_inputs`, `comparison: "none"`). Unparseable expressions -> `#ERROR!`; unparseable conditions match nothing.
 
-<!-- Keep compact 4-column table unpadded to save skill tokens. -->
-<!-- prettier-ignore -->
-| Priority | Precedence rule | Higher | Lower |
-| --- | --- | --- | --- |
-| 1 | Match mode | Exact (`$[...]`) | Relative (`[...]`) |
-| 2 | Dimension count | More dimensions (`[Stage in any, Deal in any]`) | Fewer (`[Stage in any]`, then `[]`) |
-| 3 | Filter specificity | Pinned item (`= "Won"`) | Set (`in {...}`), then `in any` or `where` |
-| 4 | Tie-breaker | Newest saved formula | Older formula, then source or zero fallback |
+## Imported Records, Sources, and Mappings
 
-- **Row-to-condition mapping:** `child_defaults` on a pinned row (`Scoping`) saves `[Stage = "Scoping", Owner in any]`; on an open breakdown axis (`Total[Stage][Owner]`) it saves `[Stage in any, Owner in any, Deal in any, Date.Month in any]`.
-- **Debugging:** Inspect via `inspect_table_blocks` (`formulas`, `inherited_from`, `formula_origins`, `include_inputs`, and `comparison: "none"` for underlying formulas on comparison tables). Unparseable expressions show `#ERROR!`; unparseable conditions match nothing.
-
-## Imported records and sources
-
-- **External columns:** Imported variables aggregate source columns (`sum(<runway:exttables/550e8400-e29b-41d4-a716-446655440000/columns/Amount>)` for additive transactions; `last(<column>)` for latest observations). Relative reads let the variable aggregate one observation per period; an absolute `$` read over a restated source sums every snapshot unless filtered.
-- **Source reads after `Last close`:** Un-ranged single-column source reads return `after_last_close` in diagnostics and stop at `Last close` (`0` or `null` afterward). Add `default_formulas.forecast: "sum(<column>)"` to read post-close rows (any other `[]` expression runs on all periods).
-- **Preferred time column (`preferred_time_property`):** Sets the governing date for calendar placement and `first`/`last` ordering.
-- **Ledgers vs. restated snapshots:** Sum transaction ledgers. For restated syncs (one row per entity per run), inspect preview first (identical rows across stamps repeat current state; differing rows preserve history) and filter by snapshot month (`ObservedAt.Month = this.Date.Month` or `date(2025, 11, 1)`).
-- **Rosters vs. monthly staffing:** A timeless roster (`Employee ID` rows, no `Date`) shows `last(...)` current state; monthly staffing (`Date` columns) carries each employee's state in the child rule (`[`Employee ID` in any]`) and sums active headcount on the parent (`[]`). For changing departments, avoid `$` in Actuals or read a dated `Department in Force` variable:
+- **Profiling warehouse tables:** Use `inspect_source_data` (`profile`) first to get row count, column types, `values_present`, and 5 sample rows in one compact call—avoid `SELECT * LIMIT 100` dumps.
+- **External columns & post-close reads:** Imported variables aggregate columns (`sum(<runway:exttables/550e8400-e29b-41d4-a716-446655440000/columns/Amount>)` for additive rows; `last(<column>)` for observations). Relative reads aggregate one observation per period; `$` over a restated source sums all snapshots unless filtered. Un-ranged single-column source reads return `after_last_close` and stop at `Last close`—add `default_formulas.forecast: "sum(<column>)"` to read post-close rows (other `[]` expressions run across all periods). `preferred_time_property` sets calendar placement and `first`/`last` order.
+- **Ledgers, snapshots, and staffing:** Sum transaction ledgers. For restated syncs, inspect preview first (identical rows across stamps = repeated current state; differing = history) and filter by snapshot month (`ObservedAt.Month = this.Date.Month` or `date(2025, 11, 1)`). Timeless roster (`Employee ID` rows, no `Date`) shows `last(...)` current state; monthly staffing (`Date` columns) carries per-employee state on `[`Employee ID` in any]` and sums active headcount on `[]`. For changing departments, avoid `$` in Actuals or read dated `Department in Force`:
 
 ```formula
 sum(Headcount$[`Employee ID` where `Department in Force`$[`Employee ID` = `Employee ID`, Date.Month = this.Date.Month] = this.Department, Date.Month = this.Date.Month])
 ```
 
-- **Sum of products and sparse nesting:** Multiply at the deal leaf (`child_defaults` on `Total[Stage][Owner]`) so parents sum weighted deals instead of multiplying summed amounts by summed probabilities:
+- **Sum of products & sparse nesting:** Multiply at the deal leaf (`child_defaults` on `Total[Stage][Owner]`) so parents sum weighted deals instead of multiplying summed amounts × summed probabilities:
 
 ```formula
 if(startofmonth(`Expected close`) = Date.Month, Amount * Probability, 0)
 ```
 
-Nested source dimensions display only combinations present in source rows (missing values group under `empty:None`).
+Nested source dimensions show only present combinations (missing -> `empty:None`).
 
-## Dimensions and mappings
+- **Dimension mappings:** Map source keys to reporting groups (`Account -> Bucket`, multi-source depts -> `Department`) with a `catch_all`. Read over an imported variable via `sum(Amount[Bucket = "COGS"])`, or over an authored variable via key hop (`sum(Amount$[Account.Bucket = this.Bucket, Date.Month = this.Date.Month])`; hops chain: `this.Project.SourceTeam.Team`). Drop outer dims deliberately when reading scoped variables (``sum(`R&D Expense`$[Account in any, Date.Month = this.Date.Month])``).
+- **Unsplit mapped classes:** When a table groups by a mapped dimension (e.g. `Class`) and a read/receipt flags formulas saved by another group on the same source key, those groups do not split automatically: fetch omitted groups via `next`, add/update a text block right below (`edit_pages` `add_text` with `after_block`) naming the source and unsplit groups in the same turn, ask once how each splits, and keep saved amounts until answered.
 
-Map source keys to reporting groups (`Account -> Bucket`, multi-source departments -> `Department`) with a `catch_all` for unmatched items. Read mappings two ways:
+## Tables, Pages, and Scenarios
 
-1. Over an imported variable (source rows carry the key):
-
-```formula
-sum(Amount[Bucket = "COGS"])
-```
-
-2. Over an authored variable (no `Bucket` in coordinates): filter via key hop:
-
-```formula
-sum(Amount$[Account.Bucket = this.Bucket, Date.Month = this.Date.Month])
-```
-
-Hops chain (`this.Project.SourceTeam.Team`). Drop outer dimensions deliberately when reading scoped variables (``sum(`R&D Expense`$[Account in any, Date.Month = this.Date.Month])``).
-
-- **Unsplit mapped classes:** When a table groups by a mapped dimension (such as `Class`) and a read or receipt reports formulas saved by another group from the same source key, those groups do not split automatically. Fetch omitted groups via `next`, add or update a text block right below the table (`edit_pages` `add_text` with `after_block`) naming the class source and unsplit groups in the same turn, ask once how each splits, and keep saved amounts until answered.
-
-## Tables, pages, and scenarios
-
-- **Table layout and field count:** Put variables on rows and `Date` on columns for time series, or record keys on rows and fields on columns for record tables (filter large tables). Show requested fields; when none are named, show all fields up to 12, and for wider sources show up to 12 identifying or actionable fields (key, date, counterparty, amount, status, owner) with remaining audit fields on a second keyed table.
-- **Windows and formatting:** Set `window` explicitly when a report names dates, and apply `format_updates` at the broadest scope.
+- **Layout & field count:** Time series: variables on rows, `Date` on columns. Record tables: record keys on rows, fields on columns (filter large tables). Show requested fields; else all up to 12, or for wider sources <=12 identifying/actionable fields (key, date, counterparty, amount, status, owner) with remaining audit fields on a second keyed table. Set `window` explicitly when dates are named; apply `format_updates` at broadest scope.
 - **Page placement:**
-  - **Deliverables** (forecast, dashboard, tracker, report, schedule, interactive tie-out): Use its own page (create or reuse) with tables beside visuals; extend existing report tables for new periods unless asked for a separate report.
-  - **Supporting checks and evidence:** Reuse a workspace-visible checks page in `Main` (never a deliverable, report, or private page), or create and reuse one top-level **Ari's working papers** in `Main` (`audience: "workspace"` if enabled). Pass `Main` on every working-papers call, name each check's source scenario, and preserve other blocks and audiences.
-  - **One-off sketches:** Use `[[sketch-answers]]` (**Ari's scratchpad**, private) only for temporary visual sketches, never durable team checks. Create an explicitly requested separate page as asked.
-- **Scenarios:**
-  - **Choices vs. scenarios:** Model coexisting options as switches or dated inputs within one plan; use scenarios for mutually exclusive alternatives and dimensions for coexisting segments. Answer what-if questions in a temporary scenario unless asked to keep it.
-  - **Target scenario:** Put new pages, tables, baselines, reports, and models in `workspace_default` (`Main`) unless the user names a scenario or edits the screen or chat scenario's assumptions (keep planned hires, spend, funding, and supporting tables there). Name the target scenario on every write.
-  - **Inheritance and corrections:** Live scenarios inherit unchanged work from their base (imported records are shared read-only); work in another scenario stays out of `Main`. Fix factual errors in the owning scenario (if another scenario holds its own version, name it and offer to fix it too).
-  - **Disclosure and forecast-only edits:** Disclose in opening and closing replies when the target differs from the screen or chat scenario, and explain how `workspace_default` input changes ripple to derived scenarios (except where a scenario keeps its own version). Write user-given assumption updates to existing inputs while keeping downstream formulas (report resulting values and any moved closed periods); for forecast-only moves, override dated `Forecast` cells or Forecast-only inputs so timeless inputs do not move history.
-  - **Cleanup:** Keep requested and full-build scenarios; delete temporary or check scenarios (`edit_scenarios` `delete`) and restore temporary test inputs in shared scenarios before ending the turn.
-- **Performance:** Prefer monthly or yearly grain over daily when results match. Write general `Date` and `this.Dim` formulas rather than per-period copies, extract repeated sub-expressions into helper variables, and use saved queries (or `ingest_csv`) so one aggregate replaces hundreds of cell rules.
+  - **Deliverables** (forecast, dashboard, tracker, report, schedule, tie-out): own page (create or reuse) with tables beside visuals; extend existing report tables for new periods unless asked for a new report.
+  - **Supporting checks:** Reuse a workspace-visible checks page in `Main` (never a deliverable/report/private page), or create/reuse top-level **Ari's working papers** in `Main` (`audience: "workspace"` if enabled). Pass `Main` on every call, name each check's source scenario, preserve other blocks/audiences.
+  - **One-off sketches:** `[[sketch-answers]]` (**Ari's scratchpad**, private) only for temporary sketches, never durable team checks. Create an explicitly requested separate page as asked.
+- **Scenarios:** Coexisting options -> switches/dated inputs in one plan; mutually exclusive alternatives -> scenarios; coexisting segments -> dimensions; what-if questions -> temporary scenario unless asked to keep. Put new pages, tables, baselines, reports, and models in `workspace_default` (`Main`) unless the user names a scenario or edits screen/chat scenario assumptions; name target scenario on every write. Live scenarios inherit unchanged base work (imports are shared read-only); fix factual errors in the owning scenario (name and offer to fix overridden copies). Disclose in opening/closing replies when target != screen/chat scenario and note `workspace_default` ripple effects. Write assumption updates to existing inputs preserving formulas, and report resulting values and any moved closed periods; for forecast-only moves, edit dated `Forecast` cells or Forecast-only inputs so timeless inputs don't shift history. Delete temporary/check scenarios (`edit_scenarios` `delete`) and restore temporary shared test inputs before ending the turn.
+- **Performance:** Prefer monthly/yearly grain over daily when results match; write general `Date`/`this.Dim` formulas over per-period copies; extract repeated sub-expressions into helper variables; use saved queries (`ingest_csv`) over hundreds of cell rules.
 
-## Checking sources and disclosures
+## Checking Sources and Disclosures
 
-- **Check before asking:** Inspect workbook tabs and connected sources before asking the user; ask only unanswered business questions.
-- **Overriding imported rules:** When the user chooses a rule over an imported one, record the table, chosen rule, reason, and source `runway-file-...` ID on the import summary page so future file updates preserve the choice.
-- **Contradictions and earlier figures:** When a finding contradicts a saved value, cite the saved value, table, variable, segments, period, and corrected value. When a new figure measures the same thing as an earlier chat figure (including before a restart or rebuild), name the earlier figure and split the difference into data/input changes versus method changes.
-- **QuickBooks:** Internal IDs (`TRANSACTION_ID`, `ID`) do not appear in QuickBooks UI; cite each transaction by type, date, payee, amount, account, memo, and document number. P&L and Balance Sheet follow `accounting_basis` from `inspect_integrations` (cash basis omits unpaid bills, and basis changes rewrite synced history).
-- **Verification:** Check `status: "applied"` readbacks across start, mid, and end periods on a mid-window change (hire, termination, rate change, FX) plus coarse rollups, and sanity-check record cells against source facts (such as salaried month = annual / 12).
+- Inspect workbook tabs and connected sources before asking unanswered business questions.
+- **Overriding imported rules:** Record table, chosen rule, reason, and `runway-file-...` ID on the import summary page so future file updates preserve it.
+- **Contradictions & earlier figures:** Cite saved value, table, variable, segments, period, and corrected value. When a new figure measures the same thing as an earlier chat figure (incl. before restart/rebuild), name the earlier figure and split difference into data/input vs. method changes.
+- **QuickBooks:** Internal IDs (`TRANSACTION_ID`, `ID`) don't appear in QBO UI—cite type, date, payee, amount, account, memo, doc number. P&L and BS follow `accounting_basis` from `inspect_integrations` (cash omits unpaid bills; basis changes rewrite history).
+- **Verification:** Check `status: "applied"` readbacks across start/mid/end periods on mid-window changes (hire, termination, rate change, FX) + coarse rollups, and sanity-check record cells against source facts (salaried month = annual / 12).
 
-## Modeling the business
+## Modeling the Business
 
-- **Full build** (new model or full rebuild): Deliver connected revenue, costs, staffing, and cash (default 12 months history plus 24 months forecast), Base/Upside/Downside scenarios, one shared controls page, full dimensional depth where economics or timing differ (grounded in research and benchmarks), keyed records or placeholders (`Software Engineer 2`), a Canvas simulator, and a `present_guide` walkthrough.
-- **Partial build** (a requested piece): Deliver only the requested piece at requested size on its own or existing pages; add separate scenarios, pages, simulators, or walkthroughs only when asked, and offer a broader build in chat.
-- **Discrete events:** Model hires, cohorts, capex projects, contracts, and financings as dated records so shifting a date moves downstream payroll, capex, revenue, and cash automatically (never flat smooth curves):
+- **Full vs. partial build:** Full build delivers connected revenue, costs, staffing, and cash (default 12 mo history + 24 mo forecast), Base/Upside/Downside scenarios, one shared controls page, dimensional depth grounded in research/benchmarks, keyed records/placeholders (`Software Engineer 2`), a Canvas simulator, and a `present_guide` walkthrough. Partial build delivers only the requested piece on its own/existing pages (add extra scenarios/simulators/walkthroughs only when asked; offer broader build in chat).
+- **Discrete events:** Model hires, cohorts, capex, contracts, and financings as dated records so shifting a date moves downstream lines automatically (never flat smooth curves):
 
 ```formula
 if(`Build Date` <> null and startofmonth(`Build Date`) = Date.Month, `Project Capex`, 0)
 ```
 
-- **Revenue:** Match business mechanics: SaaS tracks opening, additions, churn, and ending customers × ARPU; transaction or contract models track unit economics and recognition. Keep bookings, recognized revenue, billings, and cash distinct.
-- **Pipeline:** Split deals into **Bookings** (won, close month), **Open / Weighted pipeline** (open, expected close month, using the deal-leaf `Amount * Probability` rule above), and **Lost** (when requested); disclose ownerless deals and stage mappings.
-- **Costs and headcount:** Separate Cost of Revenue from OpEx (R&D, S&M, G&A) driven by operational units. Pair a current roster with a monthly staffing table keyed by `Employee ID` or cohort, driving `Headcount` (`1` or cohort count while active, else `0`) and prorated monthly pay:
+- **Revenue & pipeline:** Match business mechanics (SaaS: opening/additions/churn/ending × ARPU; keep bookings, recognized revenue, billings, cash distinct). Split deals into **Bookings** (won, close month), **Open / Weighted pipeline** (open, expected close month, leaf `Amount * Probability`), and **Lost** (if asked); disclose ownerless deals and stage mappings.
+- **Costs & headcount:** Separate COGS from OpEx (R&D, S&M, G&A) driven by operational units. Pair a roster with monthly staffing keyed by `Employee ID` or cohort driving `Headcount` (`1`/count while active, else `0`) and prorated monthly pay:
 
 ```formula
 if(`Start Date` <> null and startofmonth(`Start Date`) <= Date.Month and (`End Date` = null or startofmonth(`End Date`) >= Date.Month), Headcount * (`Annual Pay` / 12) * (datedif(if(`Start Date` > Date.Month, `Start Date`, Date.Month), if(`End Date` <> null and `End Date` < eomonth(Date.Month, 0), `End Date`, eomonth(Date.Month, 0)), "D") + 1) / daysin(Date.Month, "month"), 0)
 ```
 
-- **Pay estimates and duplicate hires:**
-  - Estimate pay via role-level rates (person-level only from sourced or user facts; disclose estimates), include taxes and benefits, and keep contractors, unpaid founders (`0`), uncategorized departments, and currencies explicit.
-  - Before reporting payroll, flag any planned hire matching a roster or payroll record by name or by role and start month. Open the reply with that pair and each record's monthly pay, state totals after it, and keep both until the user decides.
-- **Statements and cash:**
-  - **Cash:** Opening cash plus dated operating, working-capital, capex, debt, and financing flows. Use live accounting open balances over lagging CRM for overdue collections, and state the exact cash constraint date (or that cash stays positive across the horizon).
-  - **P&L:** Map ledger accounts to `Bucket`, keeping `Unclassified` visible; write `Gross Profit` and `Operating Profit` over statement variables and nest `Account` beneath.
-  - **Balance Sheet:** Use `rollup: "LAST"` across `Total assets`, `Total liabilities`, and `Total equity` (include provider `Net Income` and `Retained Earnings`, exclude `Section` subtotals). Verify `Assets = Liabilities + Equity` every period and report any residual's amount, period, and accounts.
-  - **Cash Flow:** Reconcile to Balance Sheet cash change. Indirect: start from Net Income, include each working-capital, gross capex (never double-count depreciation), debt, and equity movement once, excluding cash and Retained Earnings net-income rollups. Direct: sum classified bank movements (such as `Xero Cash Flow` standard queries once journals sync).
-  - **Account-level forecasts and run-rate check:** Forecast on account lines while preserving generated parent total sums (ask before replacing a total if account lines are blank). Before reporting forecasts, compare every variable against its last 3 actual months on the same definition (first-quarter booked costs, collections, debtor/creditor days, targeted KPIs) and quantify any step change or gap with its months and source (user instruction, recorded change, or none found).
-- **BvA:** Align plan and actuals over the latest complete shared period using existing mappings (`Variance = Actual - Plan`; `Variance % = Variance / abs(Plan)`, omitted when Plan is `0`).
-- **Delivery summary:** Distinguish internal consistency from external tie-outs (balance and cash checks prove arithmetic only; forecast completeness requires every account line forecast and the run-rate comparison). Link the page and state the method, key assumptions, commitments, coverage gaps, and additive versus restated source rows.
+Estimate pay via role-level rates (person-level only from sourced/user facts; disclose estimates), include taxes/benefits, keep contractors, unpaid founders (`0`), uncategorized depts, and currencies explicit. Before reporting payroll, flag any planned hire matching a roster/payroll record by name or role + start month: open the reply with that pair and each monthly pay, state totals after it, and keep both until the user decides.
 
-For full parser grammar, operators, and callable functions, see `[[formula-reference]]`.
+- **Statements & cash:**
+  - **Cash:** Opening cash + dated operating, working-capital, capex, debt, and financing flows. Prefer live accounting open balances over lagging CRM for overdue collections; state exact cash constraint date (or positive across horizon).
+  - **P&L:** Map ledger accounts to `Bucket` (keep `Unclassified` visible); compute `Gross Profit`/`Operating Profit` over statement variables and nest `Account` beneath.
+  - **Balance Sheet:** `rollup: "LAST"` on `Total assets`/`Total liabilities`/`Total equity` (include provider `Net Income`/`Retained Earnings`, exclude `Section` subtotals). Verify `Assets = Liabilities + Equity` every period; report any residual's amount, period, accounts.
+  - **Cash Flow:** Reconcile to BS cash change. Indirect: Net Income + each working-capital, gross capex (never double-count depreciation), debt, and equity movement once (exclude cash and Retained Earnings net-income rollups). Direct: classified bank movements (e.g. `Xero Cash Flow` standard queries once journals sync).
+  - **Account-level forecasts & run-rate check:** Forecast on account lines while keeping parent total sums (ask before replacing a total if lines are blank). Before reporting forecasts, compare every variable against its last 3 actual months on the same definition (Q1 booked costs, collections, debtor/creditor days, targeted KPIs) and quantify any step change/gap with months and source (user instruction, recorded change, or none found).
+- **BvA & delivery summary:** Align plan and actuals over latest complete shared period using existing mappings (`Variance = Actual - Plan`; `Variance % = Variance / abs(Plan)`, omitted when Plan = `0`). Distinguish internal consistency from external tie-outs (balance/cash prove arithmetic only; forecast completeness needs account-level forecasts + run-rate check). Link the page and state method, key assumptions, commitments, coverage gaps, and additive vs. restated rows.
+
+Full grammar, operators, and functions: `[[formula-reference]]`.

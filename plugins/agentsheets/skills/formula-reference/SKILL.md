@@ -1,6 +1,6 @@
 ---
 name: formula-reference
-description: Use when checking cfo.ai formula grammar, reference syntax, operators, date grains, callable functions, argument counts, or differences from Excel (parser-generated).
+description: Use when checking cfo.ai formula syntax, operators, date grains, functions, arities, or Excel differences (parser-generated).
 ---
 
 # Formula syntax and function reference
@@ -31,7 +31,7 @@ Each formula string uses one of these entry points. Match it to the field you ar
 | Dimension predicate | one predicate in a predicate editor | `Region = "West"` |
 | Predicate value | operator + RHS beside a chosen dimension | `in {"East", "West"}` |
 | Reference | single variable/dimension reference without arithmetic | `Revenue$[Region = "West"]` |
-| Formula address | matching one variable's rules (writes build this from target, grain, period, segments) | `Revenue[]` |
+| Formula address | matching one variable's rules (writes build from target/grain/period/segments) | `Revenue[]` |
 | Breakdown | readable breakdown text (tools take typed breakdown arrays) | `[Department, {Level[Department = "Engineering"], Owner}]` |
 | Predicate list | multiple predicates without outer brackets | `Region = "West", Department = "Engineering"` |
 
@@ -52,16 +52,16 @@ Each formula string uses one of these entry points. Match it to the field you ar
 
 ### Table layouts and breakdowns
 
-Readable breakdown notation (table/Canvas tools take typed `rows`/`columns` arrays; window and comparison are separate fields).
+Readable breakdown notation (tools take typed `rows`/`columns` arrays; window/comparison are separate).
 
 | Form | Meaning |
 | --- | --- |
 | `[Department]` | Split by one dimension |
-| `` [`Spend Type`] `` | Backticks quote names with spaces (written bare, the parse stops at the second word) |
+| `` [`Spend Type`] `` | Backticks quote names with spaces |
 | `[Department, Level]` | Comma nests Level under Department |
-| `[Department, {Level, Owner}]` | Braces fork side by side under Department; trailing terms apply to every branch |
-| `Level[Department = "Engineering"]` | Branch condition applies Level only under Engineering |
-| `Region in {"East", "West"}` | Item filter keeps only listed items |
+| `[Department, {Level, Owner}]` | Braces fork side by side; trailing terms apply to every branch |
+| `Level[Department = "Engineering"]` | Branch condition applies Level under Engineering only |
+| `Region in {"East", "West"}` | Item filter keeps listed items only |
 | `[Date.Month]` | Buckets Date by Day/Week/Month/Quarter/Half/Year |
 | `{Level, [Owner, Date.Month]}` | Bracketed branch nests further (Owner by month; Level flat) |
 
@@ -101,63 +101,52 @@ Precedence, highest first: `( ), f( ), 5%; -x; ^ (right-associative, unlike Exce
 
 ### Grammar
 
-The productions the parser actually uses, renamed for reading. Terminals are shown as the text you write.
+Parser productions renamed for reading; terminals shown as written.
 
 ```ebnf
-expression         = value
-                   | "not" expression
-                   | expression "and" expression
-                   | expression "or" expression
-value              = "(" expression ")"
-                   | function "(" (expression ("," expression)*)? ")"
-                   | "-" value
-                   | value "^" value
-                   | value "%"
-                   | value ("%" | "*" | "/") value
-                   | value ("+" | "-") value
-                   | value ( "<" | "<=" | ">" | ">=" | "=" | "<>" ) value
-                   | value "not"? "in" membership
-                   | "this" "." name (dot-chain ("where" expression)?)?
-                   | "$"? "[" predicate ("," predicate)* "]" dot-chain
-                   | offset
-                   | reference
-                   | number "%"
-                   | number
-                   | "null"
-                   | string
-                   | set
-reference          = name "$"? (dot-chain ("where" expression)?)?
-                   | "<runway:exttables/" table-id "/columns/" column-name ">"
-                   | name "$"? lookup-suffix dot-chain? ( "where" expression )?
-lookup-suffix      = "[" predicates? "]" (name? offset)?
-                   | offset
-condition          = "$"? "[" (predicate ("," predicate)*)? "]"
-formula-address    = name condition
-predicates         = predicate ("," predicate)*
-predicate          = name dot-chain? predicate-value
-predicate-value    = ( "=" | "<>" | "<" | "<=" | ">" | ">=" ) value
-                   | "not"? "in" "any"
-                   | "not"? "in" membership
-                   | "where" expression
-membership         = range
-                   | set
-range              = value ":" value
-offset             = "[" expression "]"
-dot-chain          = "." name ("." name)*
-set                = "{" "}"
-                   | "{" expression ("," expression)* "}"
-name               = (identifier | backtick-name | granularity) "#hex"?
-breakdown          = "[" breakdown-sequence "]"
-breakdown-sequence = breakdown-node ("," breakdown-node)*
-breakdown-node     = breakdown-term
-                   | fork
-fork               = "{" branch ("," branch)+ "}"
-branch             = breakdown-term
-                   | "[" breakdown-term ("," breakdown-node)* "]"
-breakdown-term     = name dot-chain? branch-condition? item-filter?
-branch-condition   = "[" predicate "]"
-item-filter        = "not"? "in" membership
-                   | "where" expression
+expression      = value
+                | "not" expression
+                | expression "and" expression
+                | expression "or" expression
+value           = "(" expression ")"
+                | function "(" (expression ("," expression)*)? ")"
+                | "-" value
+                | value "^" value
+                | value "%"
+                | value ("%" | "*" | "/") value
+                | value ("+" | "-") value
+                | value ( "<" | "<=" | ">" | ">=" | "=" | "<>" ) value
+                | value "not"? "in" membership
+                | "this" "." name (dot-chain ("where" expression)?)?
+                | "$"? "[" predicate ("," predicate)* "]" dot-chain
+                | offset
+                | reference
+                | number "%"
+                | number
+                | "null"
+                | string
+                | set
+reference       = name "$"? (dot-chain ("where" expression)?)?
+                | "<runway:exttables/" table-id "/columns/" column-name ">"
+                | name "$"? lookup-suffix dot-chain? ( "where" expression )?
+lookup-suffix   = "[" predicates? "]" (name? offset)?
+                | offset
+condition       = "$"? "[" (predicate ("," predicate)*)? "]"
+formula-address = name condition
+predicates      = predicate ("," predicate)*
+predicate       = name dot-chain? predicate-value
+predicate-value = ( "=" | "<>" | "<" | "<=" | ">" | ">=" ) value
+                | "not"? "in" "any"
+                | "not"? "in" membership
+                | "where" expression
+membership      = range
+                | set
+range           = value ":" value
+offset          = "[" expression "]"
+dot-chain       = "." name ("." name)*
+set             = "{" "}"
+                | "{" expression ("," expression)* "}"
+name            = (identifier | backtick-name | granularity) "#hex"?
 ```
 
 `name` also takes the granularity suffix (`Date.Month`) shown under Reference forms.

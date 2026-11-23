@@ -21,10 +21,10 @@ tool definitions, refresh its tool catalog or start a fresh conversation.
 
 | Skill | When it applies |
 | ----- | --------------- |
-| `build-model` | Use when building, editing, or troubleshooting cfo.ai models: variables, formulas, dimensions, mappings, rollups, tables, comparisons, scenarios, headcount, pipeline, statements, cash, or BvA. |
-| `build-visualizations` | Use when building Canvas visuals or interactive apps: choosing chart types, direct manipulation, binding datasets, or visual review. |
-| `formula-reference` | Use when checking cfo.ai formula grammar, reference syntax, operators, date grains, callable functions, argument counts, or differences from Excel (parser-generated). |
-| `import-model` | Use when importing, migrating, or rebuilding an external spreadsheet, export, or document as a native cfo.ai model. |
+| `build-model` | Use when building, editing, or troubleshooting cfo.ai models: variables, formulas, dimensions, mappings, rollups, tables, scenarios, statements, cash, or BvA. |
+| `build-visualizations` | Use when building or reviewing Canvas visuals and interactive apps: chart types, direct manipulation, datasets, and visual review. |
+| `formula-reference` | Use when checking cfo.ai formula syntax, operators, date grains, functions, arities, or Excel differences (parser-generated). |
+| `import-model` | Use when rebuilding an external spreadsheet, export, or document as a native cfo.ai model. |
 
 ## About this repository
 
