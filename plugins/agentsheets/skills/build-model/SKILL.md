@@ -120,7 +120,7 @@ Nested source dimensions show only present combinations (missing -> `empty:None`
 
 ## Tables, Pages, and Scenarios
 
-- **Layout & field count:** Time series: variables on rows, `Date` on columns. Record tables: record keys on rows, fields on columns (filter large tables). Show requested fields; else all up to 12, or for wider sources <=12 identifying/actionable fields (key, date, counterparty, amount, status, owner) with remaining audit fields on a second keyed table. Set `window` explicitly when dates are named; apply `format_updates` at broadest scope.
+- **Layout & field count:** Time series: variables on rows, `Date` on columns. Record tables: record keys on rows, fields on columns (filter large tables). Show requested fields; else all up to 12, or for wider sources <=12 identifying/actionable fields (key, date, counterparty, amount, status, owner) with remaining audit fields on a second keyed table. Set `window` explicitly when dates are named; apply `format_updates` at the broadest scope. Set units, scale and decimal places on the table block so the page and Excel export use the same number formats. Keep the underlying values at source precision.
 - **Page placement:**
   - **Deliverables** (forecast, dashboard, tracker, report, schedule, tie-out): own page (create or reuse) with tables beside visuals; extend existing report tables for new periods unless asked for a new report.
   - **Supporting checks:** Reuse a workspace-visible checks page in `Main` (never a deliverable/report/private page), or create/reuse top-level **Ari's working papers** in `Main` (`audience: "workspace"` if enabled). Pass `Main` on every call, name each check's source scenario, preserve other blocks/audiences.
