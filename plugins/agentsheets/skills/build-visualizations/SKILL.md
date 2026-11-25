@@ -43,11 +43,11 @@ Inspect target components and templates via `inspect_canvas_library` (`read`) fi
 
 ## Dataset and Chart Binding
 
-A block holds at most 8 datasets. Declare only datasets the block uses (every `data.<name>` evaluates before render):
+Declare only datasets the block uses (every `data.<name>` evaluates before render):
 
 - **Time-series:** Variables/breakdowns in `layout.rows`, `Date` in `layout.columns`. `dataset.rows` holds periods (`xKey: "date"`); `dataset.series` holds `{ key, label, variable, segments }`. If `dataset_evidence` has `period_count: 0` with dates in `series_names`, swap rows and columns.
 - **Record lists:** Fields in `layout.rows` (`useAs: "VARIABLE"` for mapped dimensions), record-ID dimension at source grain in `layout.columns` with `NO_GRANULARITY` (verify coarser keys do not collapse rows). Each `dataset.rows` entry is one record (`date` = label, `row[entry.key]` = value).
-- **Audience and double-counting:** Restrict sensitive rows via dataset `include` (code filters hide display only). Never stack unsegmented parents (`segments: []`) with segmented children.
+- **Audience, export, and double-counting:** The page's Excel download (Download as Excel) includes a values sheet for each saved Canvas dataset the page can show that reader. Each sheet's rows and columns follow the dataset's declared layout. Time entries listed before the variables on the columns order that sheet period by period. Restrict sensitive rows via dataset `include` (code filters hide display only). Never stack unsegmented parents (`segments: []`) with segmented children.
 - **Chart types:** Line/bar/area use `xKey: "date"`; pie/donut slice one row; waterfall takes signed deltas + `totals`. Share axes only across comparable units/scales. Check `dataset.error` before rendering:
 
 ```jsx
