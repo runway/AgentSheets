@@ -46,6 +46,7 @@ Each formula string uses one of these entry points. Match it to the field you ar
 | `this.Revenue` | Current cell coordinate inside `where` |
 | `Date.Day … Date.Year` | Date grain: `.Day` `.Week` `.Month` `.Quarter` `.Half` `.Year` (exact case) |
 | `Revenue[Region = "West"]` | Bracket lookup (predicates or date offset) |
+| `` `Last close` `` | Scenario's Last close date, readable in any formula; `` Revenue[Date.Month = startofmonth(`Last close`)] `` reads Revenue in that month |
 | `<runway:properties/UUID>` | Stored property URI (read only; author readable names) |
 | `<runway:exttables/550e8400-e29b-41d4-a716-446655440000/columns/Amount>` | External-table column (plain reference only; no `$`, `[…]`, or `.` after `>`) |
 | `// note` | `//` line comment, `/* … */` block comment |
